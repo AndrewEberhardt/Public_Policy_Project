@@ -1,4 +1,4 @@
-| Tarif (CHF/jour) | Part voiture (%) | Jours par automobiliste | Jours voiture par employé | Recette annuelle (milliers CHF) | Sensibilité : part voiture, IC95 (%) | Sensibilité : avant-après sans Sion, part voiture (%) | Sensibilité : LPM (c) linéaire, part voiture (%) | Sensibilité : recette, IC95 (milliers CHF) |
+| Tarif (CHF/jour) | Part voiture (%) | Jours par automobiliste | Jours voiture par employé | Recette annuelle (milliers CHF) | Sensibilité : part voiture, bornes IC95 (%) | Sensibilité : avant-après sans Sion, part voiture (%) | Sensibilité : LPM (c) linéaire, part voiture (%) | Sensibilité : recette, bornes IC95 (milliers CHF) |
 |---|---|---|---|---|---|---|---|---|
 | 4 (base 2025) | 43.9 | 3.45 | 1.51 | 223 |  | 43.9 | 43.9 |  |
 | 5 | 40.4 | 3.37 | 1.36 | 251 | 39.7 à 41.2 | 41.1 | 39.7 | 244 à 258 |
