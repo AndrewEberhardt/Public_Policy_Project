@@ -1,0 +1,12 @@
+| Dimension | Groupe | Jours/sem. 2024 | Jours/sem. 2025 | Élasticité intensive | N automobilistes 2024 | N automobilistes 2025 |
+|---|---|---|---|---|---|---|
+| Ensemble | Tous | 3.60 | 3.45 | -0.06 | 431 | 351 |
+| Accès TP | Bon | 3.35 | 3.12 | -0.10 | 242 | 176 |
+| Accès TP | Moyen | 3.79 | 3.64 | -0.06 | 109 | 97 |
+| Accès TP | Faible | 4.12 | 3.97 | -0.05 | 80 | 78 |
+| Tercile de revenu (EPT) | T1 (bas) | 3.49 | 3.36 | -0.06 | 126 | 94 |
+| Tercile de revenu (EPT) | T2 (moyen) | 3.60 | 3.48 | -0.05 | 133 | 109 |
+| Tercile de revenu (EPT) | T3 (haut) | 3.68 | 3.49 | -0.08 | 172 | 148 |
+| Enfants < 16 ans | 0 enfant | 3.26 | 2.93 | -0.16 | 190 | 143 |
+| Enfants < 16 ans | 1 enfant | 3.54 | 3.48 | -0.03 | 100 | 77 |
+| Enfants < 16 ans | 2 enfants ou plus | 4.11 | 4.01 | -0.03 | 141 | 131 |

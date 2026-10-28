@@ -1,0 +1,40 @@
+site,home_commune,origin_stop,origin_stop_id,dest_stop,dest_stop_id,pt_time_min,pt_transfers,car_time_min,car_km_osrm,departures_06_09,first_arrival
+Lausanne,Lausanne,"Lausanne, Bellevaux",8587357,Lausanne,8501120,16,1,6.0,3.4,55,04:57
+Lausanne,Bottens,"Bottens, croisée",8570178,Lausanne,8501120,35,1,18.3,13.1,11,06:03
+Lausanne,Bussigny,Bussigny,8501117,Lausanne,8501120,11,0,11.3,9.4,12,05:22
+Lausanne,Chavannes-pres-Renens,"Chavannes-R., Glycines",8593869,Lausanne,8501120,10,1,8.5,5.2,43,04:59
+Lausanne,Cheseaux-sur-Lausanne,"Cheseaux-sur-L., gare",8570063,Lausanne,8501120,22,1,11.9,8.6,18,05:30
+Lausanne,Corcelles-le-Jorat,"Corcelles-le-Jorat, village",8570431,Lausanne,8501120,41,2,20.9,16.1,16,05:31
+Lausanne,Crissier,"Crissier, Place Centrale",8588842,Lausanne,8501120,14,1,9.1,6.0,40,04:59
+Lausanne,Cugy,"Cugy VD, village",8573634,Lausanne,8501120,28,1,13.9,9.2,14,06:03
+Lausanne,Ecublens,"Ecublens VD, Pontet",8588873,Lausanne,8501120,17,1,8.1,5.4,50,05:30
+Lausanne,Epalinges,"Epalinges, Croisettes",8579239,Lausanne,8501120,14,0,8.7,5.1,42,05:31
+Lausanne,Froideville,"Froideville, village",8570167,Lausanne,8501120,40,1,18.9,13.2,11,06:03
+Lausanne,Le Mont-sur-Lausanne,"Le Mont-sur-L., Grand-Mont",8504177,Lausanne,8501120,22,1,10.7,6.6,27,05:40
+Lausanne,Lutry,Lutry,8501122,Lausanne,8501120,7,0,9.4,5.6,12,05:24
+Lausanne,Mezieres,"Mézières VD, village",8504758,Lausanne,8501120,41,1,21.3,17.5,18,05:31
+Lausanne,Montpreveyres,"Montpreveyres, village",8570417,Lausanne,8501120,33,1,17.4,13.3,13,05:31
+Lausanne,Morges,Morges,8501037,Lausanne,8501120,11,0,13.4,13.4,19,04:59
+Lausanne,Prilly,"Prilly, centre",8592173,Lausanne,8501120,15,1,5.0,3.0,40,04:51
+Lausanne,Pully,Pully,8501121,Lausanne,8501120,4,0,6.1,3.0,25,05:11
+Lausanne,Renens,Renens VD,8501118,Lausanne,8501120,5,0,7.9,4.9,31,04:59
+Lausanne,Romanel-sur-Lausanne,Romanel-sur-Lausanne,8501166,Lausanne,8501120,17,1,9.2,6.2,12,05:30
+Lausanne,Ropraz,"Ropraz, village",8570433,Lausanne,8501120,44,2,22.3,17.9,3,07:37
+Lausanne,Savigny,"Savigny, centre",8504173,Lausanne,8501120,32,1,14.3,10.6,13,06:15
+Lausanne,Servion,"Servion, Clos de l'Auberge",8570462,Lausanne,8501120,43,1,20.5,16.7,12,06:15
+Lausanne,Vulliens,"Vulliens, village",8557060,Lausanne,8501120,61,2,25.8,20.5,3,07:24
+Sion,Sion,"Sion, Grand Champsec",8583368,Sion,8501506,11,0,4.2,2.2,31,05:49
+Sion,Arbaz,"Arbaz, poste",8501327,Sion,8501506,28,1,16.7,10.3,4,06:47
+Sion,Ardon,Ardon,8501505,Sion,8501506,6,0,10.1,9.6,7,04:45
+Sion,Ayent,"Botyre (Ayent), centre",8501751,Sion,8501506,22,0,14.0,9.0,6,06:30
+Sion,Bramois,"Bramois, Pont de Bramois",8582433,Sion,8501506,11,0,6.6,3.6,19,06:11
+Sion,Conthey,Châteauneuf-Conthey,8501510,Sion,8501506,3,0,7.0,4.6,9,04:45
+Sion,Evolene,"Evolène, Village",8582967,Sion,8501506,38,0,29.9,24.0,2,06:11
+Sion,Grimisuat,"Grimisuat, anc. poste",8570775,Sion,8501506,17,0,10.4,6.2,8,06:30
+Sion,Heremence,Hérémence,8504677,Sion,8501506,29,0,18.7,13.1,4,06:43
+Sion,Nendaz,"Basse-Nendaz, village",8501742,Sion,8501506,24,0,15.2,11.0,6,06:14
+Sion,Saint-Martin,"St-Martin VS, poste",8570933,Sion,8501506,42,0,23.5,19.2,3,06:28
+Sion,Salins,"Salins, Turin",8570853,Sion,8501506,10,0,6.0,3.8,11,06:14
+Sion,Savieze,"Savièse, St-Germain centre",8501785,Sion,8501506,17,0,10.1,6.2,8,05:51
+Sion,Vetroz,"Vétroz, poste",8570701,Sion,8501506,17,0,9.3,6.3,12,05:36
+Sion,Vex,"Vex, poste",8570894,Sion,8501506,16,0,11.9,8.6,6,06:11

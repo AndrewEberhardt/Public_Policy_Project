@@ -1,0 +1,41 @@
+| Site | Commune | Employés | Temps TP (min) | Temps voiture (min) | Ratio TP/voiture | Départs 06h-09h | Première arrivée | Score | Classe |
+|---|---|---|---|---|---|---|---|---|---|
+| Lausanne | Renens | 63 | 5 | 7.9 | 0.63 | 31 | 04:59 | 1.42 | Bon |
+| Lausanne | Pully | 49 | 4 | 6.1 | 0.66 | 25 | 05:11 | 1.2 | Bon |
+| Lausanne | Chavannes-pres-Renens | 20 | 10 | 8.5 | 1.18 | 43 | 04:59 | 1.07 | Bon |
+| Lausanne | Morges | 43 | 11 | 13.4 | 0.82 | 19 | 04:59 | 1.03 | Bon |
+| Lausanne | Crissier | 45 | 14 | 9.1 | 1.54 | 40 | 04:59 | 0.85 | Bon |
+| Lausanne | Lutry | 46 | 7 | 9.4 | 0.74 | 12 | 05:24 | 0.72 | Bon |
+| Lausanne | Epalinges | 29 | 14 | 8.7 | 1.61 | 42 | 05:31 | 0.58 | Bon |
+| Lausanne | Lausanne | 138 | 16 | 6.0 | 2.67 | 55 | 04:57 | 0.57 | Bon |
+| Lausanne | Bussigny | 43 | 11 | 11.3 | 0.97 | 12 | 05:22 | 0.54 | Bon |
+| Lausanne | Ecublens | 39 | 17 | 8.1 | 2.1 | 50 | 05:30 | 0.45 | Bon |
+| Lausanne | Prilly | 43 | 15 | 5.0 | 3.0 | 40 | 04:51 | 0.41 | Bon |
+| Lausanne | Cheseaux-sur-Lausanne | 21 | 22 | 11.9 | 1.85 | 18 | 05:30 | 0.15 | Moyen |
+| Lausanne | Le Mont-sur-Lausanne | 35 | 22 | 10.7 | 2.06 | 27 | 05:40 | 0.15 | Moyen |
+| Lausanne | Mezieres | 22 | 41 | 21.3 | 1.92 | 18 | 05:31 | 0.11 | Moyen |
+| Lausanne | Corcelles-le-Jorat | 13 | 41 | 20.9 | 1.96 | 16 | 05:31 | 0.05 | Moyen |
+| Lausanne | Montpreveyres | 10 | 33 | 17.4 | 1.9 | 13 | 05:31 | -0.0 | Moyen |
+| Lausanne | Romanel-sur-Lausanne | 20 | 17 | 9.2 | 1.85 | 12 | 05:30 | -0.01 | Moyen |
+| Lausanne | Cugy | 21 | 28 | 13.9 | 2.01 | 14 | 06:03 | -0.27 | Moyen |
+| Lausanne | Bottens | 15 | 35 | 18.3 | 1.91 | 11 | 06:03 | -0.33 | Moyen |
+| Lausanne | Froideville | 17 | 40 | 18.9 | 2.12 | 11 | 06:03 | -0.41 | Faible |
+| Lausanne | Servion | 20 | 43 | 20.5 | 2.1 | 12 | 06:15 | -0.46 | Faible |
+| Lausanne | Savigny | 25 | 32 | 14.3 | 2.24 | 13 | 06:15 | -0.48 | Faible |
+| Lausanne | Ropraz | 10 | 44 | 22.3 | 1.97 | 3 | 07:37 | -1.61 | Faible |
+| Lausanne | Vulliens | 13 | 61 | 25.8 | 2.36 | 3 | 07:24 | -1.64 | Faible |
+| Sion | Conthey | 20 | 3 | 7.0 | 0.43 | 9 | 04:45 | 1.33 | Bon |
+| Sion | Ardon | 11 | 6 | 10.1 | 0.59 | 7 | 04:45 | 1.0 | Bon |
+| Sion | Vetroz | 19 | 17 | 9.3 | 1.83 | 12 | 05:36 | -0.05 | Moyen |
+| Sion | Sion | 56 | 11 | 4.2 | 2.62 | 31 | 05:49 | -0.05 | Moyen |
+| Sion | Bramois | 16 | 11 | 6.6 | 1.67 | 19 | 06:11 | -0.08 | Moyen |
+| Sion | Savieze | 16 | 17 | 10.1 | 1.68 | 8 | 05:51 | -0.26 | Moyen |
+| Sion | Salins | 8 | 10 | 6.0 | 1.67 | 11 | 06:14 | -0.32 | Moyen |
+| Sion | Vex | 4 | 16 | 11.9 | 1.34 | 6 | 06:11 | -0.36 | Faible |
+| Sion | Nendaz | 4 | 24 | 15.2 | 1.58 | 6 | 06:14 | -0.51 | Faible |
+| Sion | Grimisuat | 12 | 17 | 10.4 | 1.63 | 8 | 06:30 | -0.55 | Faible |
+| Sion | Ayent | 15 | 22 | 14.0 | 1.57 | 6 | 06:30 | -0.63 | Faible |
+| Sion | Evolene | 6 | 38 | 29.9 | 1.27 | 2 | 06:11 | -0.75 | Faible |
+| Sion | Heremence | 4 | 29 | 18.7 | 1.55 | 4 | 06:43 | -0.89 | Faible |
+| Sion | Arbaz | 6 | 28 | 16.7 | 1.68 | 4 | 06:47 | -0.98 | Faible |
+| Sion | Saint-Martin | 3 | 42 | 23.5 | 1.79 | 3 | 06:28 | -0.99 | Faible |
