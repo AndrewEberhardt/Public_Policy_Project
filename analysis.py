@@ -504,11 +504,11 @@ tD1 = pd.DataFrame({
     "Jours par automobiliste": central.D.map(lambda v: f"{v:.2f}"),
     "Jours voiture par employé": central["T"].map(lambda v: f"{v:.2f}"),
     "Recette annuelle (milliers CHF)": central.rev.map(lambda v: f"{v / 1000:.0f}"),
-    "Sensibilité : part voiture, IC95 (%)": [f"{pct(l)} à {pct(h)}" if p != 4 else "" for p, l, h in
+    "Sensibilité : part voiture, bornes IC95 (%)": [f"{pct(l)} à {pct(h)}" if p != 4 else "" for p, l, h in
                                              zip(central.fee, alt_lo.S, alt_hi.S)],
     "Sensibilité : avant-après sans Sion, part voiture (%)": alt_raw.S.map(pct),
     "Sensibilité : LPM (c) linéaire, part voiture (%)": lpm.S.map(pct),
-    "Sensibilité : recette, IC95 (milliers CHF)": [f"{l / 1000:.0f} à {h / 1000:.0f}" if p != 4 else "" for p, l, h in
+    "Sensibilité : recette, bornes IC95 (milliers CHF)": [f"{l / 1000:.0f} à {h / 1000:.0f}" if p != 4 else "" for p, l, h in
                                                   zip(central.fee, alt_lo.rev, alt_hi.rev)],
 })
 save(tD1, "table_D1")
@@ -527,7 +527,7 @@ for ax, col, scale, ylab, title in [
         (axes[0], "S", 100, "Part d'employés venant en voiture (%)", "Part voiture"),
         (axes[1], "rev", 1e-3, "Recette annuelle (milliers CHF)", "Recette de parking")]:
     ax.fill_between(x, alt_lo[col] * scale, alt_hi[col] * scale, color=BLUE, alpha=0.15, lw=0,
-                    label="IC 95 % des élasticités")
+                    label="Bornes des IC 95 % (ext. et int.)")
     ax.plot(x, central[col] * scale, color=BLUE, lw=2, marker="o", ms=4, label="Central (net de Sion)")
     ax.plot(x, alt_raw[col] * scale, color=ORANGE, lw=2, ls="--", marker="s", ms=4,
             label="Lausanne avant-après")
