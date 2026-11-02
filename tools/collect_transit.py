@@ -9,8 +9,19 @@ Sources
 - Temps voiture : moteur d'itinéraire OSRM (router.project-osrm.org, données OpenStreetMap),
   temps à vitesse libre, sans trafic.
 
-Destination : gare de Lausanne (8501120) pour le site de Lausanne, gare de Sion (8501506) pour le site de Sion
-(adresse exacte des sites non communiquée).
+Pourquoi OSRM plutôt que Google Maps : OSRM est libre et sans clé (reproductible par tous), ses données
+OpenStreetMap peuvent être redistribuées dans transit_access.csv, et le temps à vitesse libre est stable d'une
+exécution à l'autre. L'API Google exige un compte de facturation, limite le stockage des résultats et donne des
+temps qui dépendent du trafic prévu au moment de la requête.
+Limite : sans trafic, le temps voiture de pointe est sous-estimé, donc le ratio TP/voiture est surestimé
+(surtout pour les trajets urbains courts). Alternative écartée : temps voiture avec congestion de l'ARE (modèle
+national du trafic voyageurs 2023, Zenodo, CC BY 4.0), car moyenne journalière et non heure de pointe, et donnés
+entre zones de trafic et non entre communes.
+
+Destination : gare de Lausanne (8501120) pour le site de Lausanne, gare de Sion (8501506) pour le site de Sion.
+Raisons : adresse exacte des sites non communiquée ; la gare est le centre du réseau TP et un arrêt officiel à
+identifiant fixe ; voiture et TP sont calculés entre les mêmes points. Limite : le dernier bout du trajet entre
+la gare et le site n'est pas compté.
 
 Sortie : tools/transit_raw.csv (indicateurs bruts) + réponses JSON dans tools/raw/.
 """
