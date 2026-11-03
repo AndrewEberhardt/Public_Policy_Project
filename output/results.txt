@@ -1,53 +1,53 @@
-[Nettoyage] libellés de commune bruts : 62, après harmonisation : 39
-[Nettoyage] employés changeant de commune entre 2024 et 2025 après harmonisation : 0
-[Nettoyage] employés dont le revenu observé diffère entre années : 0
-[Nettoyage] revenus manquants : 110 lignes ; imputés depuis l'autre année : 102 ; imputés par la médiane équivalent plein temps : 8 lignes (4 employés)
-[Nettoyage] car_days_per_week > 5 : [['E1001', 2025, 7.4]] -> plafonné à 5
-[Nettoyage] âge identique en 2024 et 2025 pour tous les employés (âge mesuré une seule fois)
-[Groupes] bornes des terciles de revenu équivalent plein temps : 80,800 et 105,700 CHF
-[A] corrélation distance OSRM vs distance moyenne déclarée par commune : 0.97
-[A] corrélation score TP vs distance moyenne déclarée : -0.61
-[A] employés par classe et site :
-transit_class  Bon  Moyen  Faible
+[Cleaning] raw municipality labels: 62, after harmonisation: 39
+[Cleaning] employees changing municipality between 2024 and 2025 after harmonisation: 0
+[Cleaning] employees whose observed income differs between years: 0
+[Cleaning] missing income: 110 rows; imputed from the other year: 102; imputed with the full-time-equivalent median: 8 rows (4 employees)
+[Cleaning] car_days_per_week > 5: [['E1001', 2025, 7.4]] -> capped at 5
+[Cleaning] age identical in 2024 and 2025 for every employee (age measured once)
+[Groups] full-time-equivalent income tercile cut-offs: 80'800 and 105'700 CHF
+[A] correlation OSRM distance vs mean reported distance by municipality: 0.97
+[A] correlation transit score vs mean reported distance: -0.66
+[A] employees by class and site:
+transit_class  Good  Medium  Poor
 site                             
-Lausanne       558    157      85
-Sion            31    115      54
-[B1] Lausanne, mode 2025 des automobilistes 2024 qui quittent la voiture : {'bus': 59, 'bike': 21}
-[B] Lausanne : part voiture 53.9 % -> 43.9 % ; -10.0 pp ; élasticité extensive -0.30
-[B] Sion : part voiture 58.5 % -> 61.5 % ; 3.0 pp
-[B] Lausanne net de Sion : -13.0 pp
-[B3] (a) Lausanne: coef log(tarif) = -0.144 (se 0.015) ; doublement = -10.0 pp [IC95 -12.1 ; -7.9]
-[B3] (b) + Sion: coef log(tarif) = -0.188 (se 0.023) ; doublement = -13.0 pp [IC95 -16.2 ; -9.8]
-[B3] (c) + contrôles: coef log(tarif) = -0.188 (se 0.023) ; doublement = -13.0 pp [IC95 -16.2 ; -9.8]
-[B3] (d) + interactions: coef log(tarif) = -0.260 (se 0.033) ; doublement = -18.0 pp [IC95 -22.5 ; -13.5]
-[C] Lausanne : jours/automobiliste 3.60 -> 3.45 ; élasticité intensive -0.06
-[C] Sion : jours/automobiliste 3.55 -> 3.65
-[C2] (a) Lausanne: élasticité -0.077 (se 0.015)
-[C2] (b) + Sion: élasticité -0.114 (se 0.022)
-[C2] (c) + contrôles: élasticité -0.151 (se 0.021)
-[C2] (d) + interactions: élasticité -0.275 (se 0.031)
-[C] sélection (caractéristiques 2024, Lausanne) :
-                     Automobilistes 2024  Automobilistes 2025    Restent  Quittent la voiture
-N                                 431.00               351.00     351.00                80.00
-Jours/sem. 2024                     3.60                 3.73       3.73                 3.07
-Distance (km)                      10.36                11.12      11.12                 7.00
-Accès TP faible (%)                18.56                22.22      22.22                 2.50
-Accès TP bon (%)                   56.15                50.14      50.14                82.50
-Revenu EPT (CHF)               102891.84            104764.48  104764.48             94675.62
-Enfants (moy.)                      0.89                 0.97       0.97                 0.54
-[C] élasticité intensive, automobilistes les deux années, effets fixes employé + année (Lausanne vs Sion) : -0.161 (se 0.028), N = 936
-[C] spécification (c) en excluant E1001-2025 au lieu de plafonner : -0.153
-[C3] avant-après : ext -0.296 + int -0.062 = -0.358 ; total -0.358
-[C3] net de Sion : ext -0.368 + int -0.102 = -0.471 ; total -0.471
-[C3] part de la marge extensive dans le total (net de Sion) : 78 %
-[D] élasticités centrales (nettes de Sion) : extensive -0.368, intensive -0.102
-[D] scénario central :
+Lausanne        426     240   134
+Sion            122      55    23
+[B1] Lausanne, 2025 mode of 2024 drivers who leave the car: {'bus': 59, 'bike': 21}
+[B] Lausanne: car share 53.9 % -> 43.9 %; -10.0 pp; extensive elasticity -0.30
+[B] Sion: car share 58.5 % -> 61.5 %; 3.0 pp
+[B] Lausanne net of Sion: -13.0 pp
+[B3] (a) Lausanne: coef log(fee) = -0.144 (se 0.015); doubling = -10.0 pp [95% CI -12.1; -7.9]
+[B3] (b) + Sion: coef log(fee) = -0.188 (se 0.023); doubling = -13.0 pp [95% CI -16.2; -9.8]
+[B3] (c) + controls: coef log(fee) = -0.188 (se 0.023); doubling = -13.0 pp [95% CI -16.2; -9.8]
+[B3] (d) + interactions: coef log(fee) = -0.258 (se 0.036); doubling = -17.9 pp [95% CI -22.8; -13.0]
+[C] Lausanne: days per driver 3.60 -> 3.45; intensive elasticity -0.06
+[C] Sion: days per driver 3.55 -> 3.65
+[C2] (a) Lausanne: elasticity -0.077 (se 0.015)
+[C2] (b) + Sion: elasticity -0.114 (se 0.022)
+[C2] (c) + controls: elasticity -0.151 (se 0.021)
+[C2] (d) + interactions: elasticity -0.305 (se 0.033)
+[C] selection (2024 characteristics, Lausanne):
+                         Drivers 2024  Drivers 2025       Stay  Leave the car
+N                              431.00        351.00     351.00          80.00
+Days/week 2024                   3.60          3.73       3.73           3.07
+Distance (km)                   10.36         11.12      11.12           7.00
+Poor transit access (%)         27.15         32.76      32.76           2.50
+Good transit access (%)         40.84         35.04      35.04          66.25
+FTE income (CHF)            102891.84     104764.48  104764.48       94675.62
+Children (mean)                  0.89          0.97       0.97           0.54
+[C] intensive elasticity, drivers in both years, employee + year fixed effects (Lausanne vs Sion): -0.161 (se 0.028), N = 936
+[C] specification (c) dropping E1001-2025 instead of capping: -0.152
+[C3] before-after: ext -0.296 + int -0.062 = -0.358; total -0.358
+[C3] net of Sion: ext -0.368 + int -0.102 = -0.471; total -0.471
+[C3] share of the extensive margin in the total (net of Sion): 78 %
+[D] central elasticities (net of Sion): extensive -0.368, intensive -0.102
+[D] central scenario:
    fee       S       D       T          rev
 0    4  0.4388  3.4527  1.5149  222989.6000
 1    5  0.4041  3.3748  1.3638  250944.9889
 2    6  0.3779  3.3124  1.2517  276368.6081
 3    8  0.3399  3.2163  1.0932  321823.7378
 4   10  0.3131  3.1437  0.9842  362169.6002
-[D] recette 2024 observée Lausanne : 142,904 CHF
-[E] élasticités (ext, int) par classe TP utilisées pour la projection : {'Bon': (np.float64(-0.459), np.float64(-0.102)), 'Moyen': (np.float64(-0.168), np.float64(-0.059)), 'Faible': (np.float64(-0.037), np.float64(-0.054))}
-[E] taux d'effort max individuel 2025 (Lausanne) : 1.86 % ; part des automobilistes au-dessus de 1 % : 12.8 %
+[D] observed 2024 revenue, Lausanne: 142'904 CHF
+[E] elasticities (ext, int) by transit class used for the projection: {'Good': (np.float64(-0.517), np.float64(-0.125)), 'Medium': (np.float64(-0.288), np.float64(-0.059)), 'Poor': (np.float64(-0.025), np.float64(-0.052))}
+[E] maximum individual burden 2025 (Lausanne): 1.86 %; share of drivers above 1 %: 12.8 %

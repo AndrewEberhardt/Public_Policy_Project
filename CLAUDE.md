@@ -33,6 +33,6 @@ Projet de groupe (politique publique). Consignes complètes dans `Project_guidel
 - Python (pandas, statsmodels, matplotlib). Erreurs standard groupées par employé.
 - Tableaux mis en forme soi-même, jamais de sortie brute de statsmodels.
 - Indiquer variable dépendante, unités, catégories de référence, méthode des erreurs standard, N et restrictions d'échantillon.
-- Arrondis identiques dans tout le rapport.
+- Arrondis identiques dans tout le rapport. Séparateur décimal : point partout (tableaux et texte) ; milliers séparés par « ' ».
 - Ne pas utiliser de tirets longs dans les textes rédigés.
 - L'usage de l'IA doit être déclaré brièvement dans le rapport.

@@ -1,19 +1,22 @@
-"""Tarification du parking et mode de transport : script d'analyse reproductible.
+"""Workplace parking pricing and commuting mode: reproducible analysis script.
 
-Entrées : parking_data.csv, transit_access.csv (même dossier que ce script).
-Sorties : output/tables/*.csv et output/tables/*.md (tableaux A1, B1-B3, C1-C3, D1, E1),
-          output/figures/figure_D1.pdf et .png, output/results.txt (chiffres cités dans le texte).
+Inputs : parking_data.csv, transit_access.csv (same folder as this script).
+Outputs: output/tables/*.csv and output/tables/*.md (tables A1, B1-B3, C1-C3, D1, E1; table_A1_communes = full list
+         of the 39 municipalities, Table A1 in the report being a summary by site and class),
+         output/figures/figure_D1.pdf and .png, output/results.txt (numbers quoted in the text).
 
-Exécution : python analysis.py
+Run: python analysis.py
 
-Conventions d'arrondi (identiques dans tout le rapport)
-- parts et taux en %         : 1 décimale
-- variations en points de %  : 1 décimale
-- élasticités                : 2 décimales
-- coefficients de régression : 3 décimales (erreurs standard entre parenthèses)
-- jours par semaine          : 2 décimales
-- montants en CHF            : arrondis à l'unité (recettes au millier de CHF)
-- taux d'effort (% du revenu): 2 décimales
+Rounding conventions (identical throughout the report)
+- shares and rates in %        : 1 decimal
+- changes in percentage points : 1 decimal
+- elasticities                 : 2 decimals
+- regression coefficients      : 3 decimals (standard errors in parentheses)
+- days per week                : 2 decimals
+- CHF amounts                  : rounded to the franc (revenue to the thousand CHF)
+- burden (% of income)         : 2 decimals
+- decimal separator            : point everywhere (tables and text); thousands separated by "'" (80'800 CHF)
+- transit index (Table A1)     : score out of 100 with 1 decimal, PT/car ratio with 2 decimals, times in minutes
 """
 from pathlib import Path
 
@@ -32,10 +35,10 @@ FIG = OUT / "figures"
 TAB.mkdir(parents=True, exist_ok=True)
 FIG.mkdir(parents=True, exist_ok=True)
 
-WEEKS = 46                      # semaines travaillées par an
-FEE_2024, FEE_2025 = 2.0, 4.0   # tarif Lausanne
-SCENARIOS = [4, 5, 6, 8, 10]    # CHF par jour, 4 = base 2025
-RECO_FEE = 6                    # tarif recommandé pour 2026 (Partie F)
+WEEKS = 46                      # working weeks per year
+FEE_2024, FEE_2025 = 2.0, 4.0   # Lausanne fee
+SCENARIOS = [4, 5, 6, 8, 10]    # CHF per day, 4 = 2025 baseline
+RECO_FEE = 6                    # recommended 2026 fee (Part F)
 N_BOOT = 999
 RNG = np.random.default_rng(2026)
 
@@ -43,7 +46,7 @@ LOG = []
 
 
 def note(*args):
-    """Enregistre un résultat cité dans le texte."""
+    """Record a result quoted in the text."""
     line = " ".join(str(a) for a in args)
     LOG.append(line)
     print(line)
@@ -57,6 +60,11 @@ def save(df, name, index=False):
     (TAB / f"{name}.md").write_text("\n".join(lines) + "\n")
 
 
+def chf(x):
+    """CHF amount rounded to the franc, thousands separated by "'" (the point is reserved for decimals)."""
+    return f"{x:,.0f}".replace(",", "'")
+
+
 def pct(x):
     return f"{100 * x:.1f}"
 
@@ -66,143 +74,169 @@ def stars(p):
 
 
 # =============================================================================
-# 0. Chargement et nettoyage
+# 0. Loading and cleaning
 # =============================================================================
 raw = pd.read_csv(ROOT / "parking_data.csv")
 df = raw.copy()
 
-# 0.1 Communes : 62 libellés -> 39 communes (casse et tirets incohérents)
+# 0.1 Municipalities: 62 labels -> 39 municipalities (inconsistent case and hyphens)
 def commune_key(s):
     return s.str.upper().str.replace("-", " ", regex=False).str.strip()
 
 df["commune_key"] = commune_key(df.home_commune)
 canon = (df.groupby("commune_key").home_commune
-         .agg(lambda s: s[s != s.str.upper()].mode().iloc[0]))   # graphie en casse mixte la plus fréquente
+         .agg(lambda s: s[s != s.str.upper()].mode().iloc[0]))   # most frequent mixed-case spelling
 df["home_commune"] = df.commune_key.map(canon)
-note(f"[Nettoyage] libellés de commune bruts : {raw.home_commune.nunique()}, après harmonisation : "
+note(f"[Cleaning] raw municipality labels: {raw.home_commune.nunique()}, after harmonisation: "
      f"{df.home_commune.nunique()}")
 moved = df.groupby("employee_id").home_commune.nunique().gt(1).sum()
-note(f"[Nettoyage] employés changeant de commune entre 2024 et 2025 après harmonisation : {moved}")
+note(f"[Cleaning] employees changing municipality between 2024 and 2025 after harmonisation: {moved}")
 
-# 0.2 Revenu manquant : imputation depuis l'autre année du même employé (revenu identique d'une année à l'autre
-# pour tous les employés observés deux fois), sinon médiane du revenu équivalent plein temps x fte
+# 0.2 Missing income: imputed from the same employee's other year (income is identical across years for every
+# employee observed twice), otherwise median full-time-equivalent income x fte
 inc_varies = (df.dropna(subset=["gross_income_chf"]).groupby("employee_id").gross_income_chf.nunique() > 1).sum()
-note(f"[Nettoyage] employés dont le revenu observé diffère entre années : {inc_varies}")
+note(f"[Cleaning] employees whose observed income differs between years: {inc_varies}")
 n_missing = df.gross_income_chf.isna().sum()
 df["income_imputed"] = df.gross_income_chf.isna().astype(int)
 df["gross_income_chf"] = df.groupby("employee_id").gross_income_chf.transform(lambda s: s.fillna(s.mean()))
 still = df.gross_income_chf.isna()
 med_fte_income = (df.gross_income_chf / df.fte).median()
 df.loc[still, "gross_income_chf"] = (med_fte_income * df.loc[still, "fte"]).round(-2)
-note(f"[Nettoyage] revenus manquants : {n_missing} lignes ; imputés depuis l'autre année : {n_missing - still.sum()} ; "
-     f"imputés par la médiane équivalent plein temps : {still.sum()} lignes ({still.sum() // 2} employés)")
+note(f"[Cleaning] missing income: {n_missing} rows; imputed from the other year: {n_missing - still.sum()}; "
+     f"imputed with the full-time-equivalent median: {still.sum()} rows ({still.sum() // 2} employees)")
 
-# 0.3 Jours de voiture hors bornes (E1001 en 2025 : 7,4 > 5) : plafonné à 5
+# 0.3 Car days out of range (E1001 in 2025: 7.4 > 5): capped at 5
 bad = df.car_days_per_week > 5
-note(f"[Nettoyage] car_days_per_week > 5 : {df.loc[bad, ['employee_id', 'year', 'car_days_per_week']].values.tolist()} "
-     "-> plafonné à 5")
+note(f"[Cleaning] car_days_per_week > 5: {df.loc[bad, ['employee_id', 'year', 'car_days_per_week']].values.tolist()} "
+     "-> capped at 5")
 df["car_days_raw"] = df.car_days_per_week
 df.loc[bad, "car_days_per_week"] = 5.0
 
-# 0.4 Contrôles de cohérence
+# 0.4 Consistency checks
 assert (df.uses_car == (df.main_mode == "car")).all()
 assert ((df.uses_car == 1) == (df.car_days_per_week > 0)).all()
 assert not df.duplicated(["employee_id", "year"]).any()
 for c in ["site", "distance_km", "age", "gender", "n_children", "fte", "home_postcode"]:
     assert df.groupby("employee_id")[c].nunique().max() == 1, c
-note("[Nettoyage] âge identique en 2024 et 2025 pour tous les employés (âge mesuré une seule fois)")
+note("[Cleaning] age identical in 2024 and 2025 for every employee (age measured once)")
 
-# 0.5 Variables dérivées
+# 0.5 Derived variables
 df["post"] = (df.year == 2025).astype(int)
 df["lausanne"] = (df.site == "Lausanne").astype(int)
 df["log_fee"] = np.log(df.parking_fee_chf)
 df["income_fte"] = df.gross_income_chf / df.fte
 emp = df[df.year == 2024].set_index("employee_id")
-terc = pd.qcut(emp.income_fte, 3, labels=["T1 (bas)", "T2 (moyen)", "T3 (haut)"])
+terc = pd.qcut(emp.income_fte, 3, labels=["T1 (low)", "T2 (middle)", "T3 (high)"])
 df["income_tercile"] = df.employee_id.map(terc)
 cuts = emp.income_fte.quantile([1 / 3, 2 / 3]).round(-2)
-note(f"[Groupes] bornes des terciles de revenu équivalent plein temps : {cuts.iloc[0]:,.0f} et {cuts.iloc[1]:,.0f} CHF")
-df["children_group"] = df.n_children.map({0: "0 enfant", 1: "1 enfant", 2: "2 enfants ou plus"})
-df["income_c"] = (df.income_fte - emp.income_fte.mean()) / 10_000   # centré, en 10 000 CHF
+note(f"[Groups] full-time-equivalent income tercile cut-offs: {chf(cuts.iloc[0])} and {chf(cuts.iloc[1])} CHF")
+df["children_group"] = df.n_children.map({0: "0 children", 1: "1 child", 2: "2 or more children"})
+df["income_c"] = (df.income_fte - emp.income_fte.mean()) / 10_000   # centred, in CHF 10,000
 df["log_dist"] = np.log(df.distance_km)
 df["female"] = (df.gender == "F").astype(int)
 df["age_c"] = df.age - emp.age.mean()
 
 
 # =============================================================================
-# Partie A : indice d'accès aux transports publics
+# Part A: public transport accessibility index
 # =============================================================================
 ta = pd.read_csv(ROOT / "transit_access.csv")
 first = ta.first_arrival.str[:2].astype(int) * 60 + ta.first_arrival.str[3:].astype(int)
 z = lambda x: (x - x.mean()) / x.std()
-score = (z(-np.log(ta.pt_car_ratio)) + z(np.log(ta.departures_06_09)) + z(-first)) / 3
-assert np.allclose(score.round(3), ta.transit_score, atol=1e-3), "score recalculé différent du fichier"
-cls = pd.qcut(score, 3, labels=["Faible", "Moyen", "Bon"]).astype(str)
+W_RATIO, W_DEP, W_FIRST = 0.4, 0.4, 0.2   # weights: arrival around 08:00 = departures 06:00-09:00 > first arrival
+score = W_RATIO * z(-np.log(ta.pt_car_ratio)) + W_DEP * z(np.log(ta.departures_06_09)) + W_FIRST * z(-first)
+score = 100 * (score - score.min()) / (score.max() - score.min())   # scale 0 (worst) to 100 (best)
+assert np.allclose(score.round(1), ta.transit_score, atol=0.051), "recomputed score differs from the file"
+# classes: score terciles computed separately for each site (Lausanne municipalities among themselves, Sion likewise)
+cls = score.groupby(ta.site).transform(lambda x: pd.qcut(x, 3, labels=["Poor", "Medium", "Good"]).astype(str))
 assert (cls == ta.transit_class).all()
 
 ta["commune_key"] = commune_key(ta.home_commune)
-assert set(df.commune_key) == set(ta.commune_key), "communes sans indice"
+assert set(df.commune_key) == set(ta.commune_key), "municipalities without an index"
 df = df.merge(ta[["site", "commune_key", "transit_score", "transit_class", "car_km_osrm"]],
               on=["site", "commune_key"], how="left", validate="many_to_one")
 assert df.transit_class.notna().all()
-ORDER_T = ["Bon", "Moyen", "Faible"]
+ORDER_T = ["Good", "Medium", "Poor"]
 df["transit_class"] = pd.Categorical(df.transit_class, ORDER_T, ordered=True)
 
 n_emp = df[df.year == 2024].groupby("home_commune").size()
 tA1 = ta.assign(n_employes=ta.home_commune.map(n_emp))
 tA1 = tA1[["site", "home_commune", "n_employes", "pt_time_min", "car_time_min", "pt_car_ratio",
            "departures_06_09", "first_arrival", "transit_score", "transit_class"]]
-tA1.columns = ["Site", "Commune", "Employés", "Temps TP (min)", "Temps voiture (min)", "Ratio TP/voiture",
-               "Départs 06h-09h", "Première arrivée", "Score", "Classe"]
-tA1["Score"] = tA1.Score.round(2)
-save(tA1, "table_A1")
+tA1.columns = ["Site", "Municipality", "Employees", "PT time (min)", "Car time (min)", "PT/car ratio",
+               "Departures 06:00-09:00", "First arrival", "Score", "Class"]
+tA1["Score"] = tA1.Score.round(1)
+tA1["Car time (min)"] = tA1["Car time (min)"].map("{:.1f}".format)
+tA1["PT/car ratio"] = tA1["PT/car ratio"].map("{:.2f}".format)
+# municipality names with accents, for display only
+ACCENTS = {"Chavannes-pres-Renens": "Chavannes-près-Renens", "Mezieres": "Mézières", "Vetroz": "Vétroz",
+           "Savieze": "Savièse", "Heremence": "Hérémence", "Evolene": "Evolène"}
+tA1["Municipality"] = tA1.Municipality.replace(ACCENTS)
+save(tA1, "table_A1_communes")   # full list of the 39 municipalities (reference; also in transit_access.csv)
 
-# Validation : corrélations avec la distance déclarée et ordre des classes
+# Table A1 (report): compact summary by site and class, every municipality named
+ta_d = ta.assign(first_min=first, Municipality=ta.home_commune.replace(ACCENTS),
+                 n_employes=ta.home_commune.map(n_emp))
+rows = []
+for site in ["Lausanne", "Sion"]:
+    for c in ORDER_T:
+        g = ta_d[(ta_d.site == site) & (ta_d.transit_class == c)].sort_values("transit_score", ascending=False)
+        fm = int(round(g.first_min.median()))
+        rows.append({"Site": site, "Class": c, "Municipalities": len(g), "Employees": int(g.n_employes.sum()),
+                     "PT/car ratio (median)": f"{g.pt_car_ratio.median():.2f}",
+                     "Departures 06:00-09:00 (median)": f"{g.departures_06_09.median():.1f}",
+                     "First arrival (median)": f"{fm // 60:02d}:{fm % 60:02d}",
+                     "Score (min-max)": f"{g.transit_score.min():.1f}-{g.transit_score.max():.1f}",
+                     "Municipalities (by decreasing score)": ", ".join(g.Municipality)})
+tA1_summary = pd.DataFrame(rows)
+save(tA1_summary, "table_A1")
+
+# Validation: correlations with reported distance and class ordering
 dist_c = df[df.year == 2024].groupby(["site", "commune_key"]).distance_km.mean()
 v = ta.set_index(["site", "commune_key"]).join(dist_c)
-note(f"[A] corrélation distance OSRM vs distance moyenne déclarée par commune : "
+note(f"[A] correlation OSRM distance vs mean reported distance by municipality: "
      f"{v.car_km_osrm.corr(v.distance_km):.2f}")
-note(f"[A] corrélation score TP vs distance moyenne déclarée : {v.transit_score.corr(v.distance_km):.2f}")
-note("[A] employés par classe et site :\n" +
+note(f"[A] correlation transit score vs mean reported distance: {v.transit_score.corr(v.distance_km):.2f}")
+note("[A] employees by class and site:\n" +
      pd.crosstab(df[df.year == 2024].site, df[df.year == 2024].transit_class).to_string())
 
 
 # =============================================================================
-# Partie B : marge extensive (uses_car)
+# Part B: extensive margin (uses_car)
 # =============================================================================
 LS = df[df.site == "Lausanne"]
 SI = df[df.site == "Sion"]
 DLOGFEE = np.log(FEE_2025 / FEE_2024)
 
-# --- B1 : parts modales et flux
+# --- B1: mode shares and flows
 rows = []
 for site, g in df.groupby("site"):
     for y, gy in g.groupby("year"):
         sh = gy.main_mode.value_counts(normalize=True)
-        rows.append({"Site": site, "Année": y, "Tarif (CHF/jour)": gy.parking_fee_chf.iloc[0], "N": len(gy),
-                     "Voiture (%)": pct(sh.get("car", 0)), "Bus (%)": pct(sh.get("bus", 0)),
-                     "Vélo (%)": pct(sh.get("bike", 0))})
+        rows.append({"Site": site, "Year": y, "Fee (CHF/day)": gy.parking_fee_chf.iloc[0], "N": len(gy),
+                     "Car (%)": pct(sh.get("car", 0)), "Bus (%)": pct(sh.get("bus", 0)),
+                     "Bike (%)": pct(sh.get("bike", 0))})
 tB1 = pd.DataFrame(rows)
 
 w = df.pivot(index="employee_id", columns="year", values="uses_car")
 w["site"] = df[df.year == 2024].set_index("employee_id").site
 flows = w.groupby("site").apply(lambda g: pd.Series({
-    "Voiture -> autre": int(((g[2024] == 1) & (g[2025] == 0)).sum()),
-    "Autre -> voiture": int(((g[2024] == 0) & (g[2025] == 1)).sum()),
+    "Car -> other": int(((g[2024] == 1) & (g[2025] == 0)).sum()),
+    "Other -> car": int(((g[2024] == 0) & (g[2025] == 1)).sum()),
 }), include_groups=False)
-flows["Variation nette"] = flows["Autre -> voiture"] - flows["Voiture -> autre"]
+flows["Net change"] = flows["Other -> car"] - flows["Car -> other"]
 for site in ["Lausanne", "Sion"]:
     s0 = df[(df.site == site) & (df.year == 2024)].uses_car.mean()
     s1 = df[(df.site == site) & (df.year == 2025)].uses_car.mean()
-    flows.loc[site, "Variation part voiture (pp)"] = f"{100 * (s1 - s0):.1f}"
-    flows.loc[site, "Variation part voiture (%)"] = f"{100 * (s1 / s0 - 1):.1f}"
+    flows.loc[site, "Change in car share (pp)"] = f"{100 * (s1 - s0):.1f}"
+    flows.loc[site, "Change in car share (%)"] = f"{100 * (s1 / s0 - 1):.1f}"
 tB1 = tB1.merge(flows.astype(str).reset_index().rename(columns={"site": "Site"}), on="Site")
-tB1.loc[tB1["Année"] == 2024, flows.columns] = ""
+tB1.loc[tB1["Year"] == 2024, flows.columns] = ""
 save(tB1, "table_B1")
 
-# mode de destination des automobilistes de Lausanne qui quittent la voiture
+# 2025 mode of Lausanne drivers who leave the car
 mw = LS.pivot(index="employee_id", columns="year", values="main_mode")
-note("[B1] Lausanne, mode 2025 des automobilistes 2024 qui quittent la voiture :",
+note("[B1] Lausanne, 2025 mode of 2024 drivers who leave the car:",
      mw[(mw[2024] == "car") & (mw[2025] != "car")][2025].value_counts().to_dict())
 
 
@@ -214,20 +248,20 @@ def ext_stats(g):
 
 s0, s1, dpp, e_ext = ext_stats(LS)
 s0S, s1S, dppS, _ = ext_stats(SI)
-note(f"[B] Lausanne : part voiture {pct(s0)} % -> {pct(s1)} % ; {dpp:.1f} pp ; élasticité extensive {e_ext:.2f}")
-note(f"[B] Sion : part voiture {pct(s0S)} % -> {pct(s1S)} % ; {dppS:.1f} pp")
-note(f"[B] Lausanne net de Sion : {dpp - dppS:.1f} pp")
+note(f"[B] Lausanne: car share {pct(s0)} % -> {pct(s1)} %; {dpp:.1f} pp; extensive elasticity {e_ext:.2f}")
+note(f"[B] Sion: car share {pct(s0S)} % -> {pct(s1S)} %; {dppS:.1f} pp")
+note(f"[B] Lausanne net of Sion: {dpp - dppS:.1f} pp")
 
-# --- B2 : hétérogénéité (Lausanne)
-GROUPS = [("Accès TP", "transit_class", ORDER_T),
-          ("Tercile de revenu (EPT)", "income_tercile", ["T1 (bas)", "T2 (moyen)", "T3 (haut)"]),
-          ("Enfants < 16 ans", "children_group", ["0 enfant", "1 enfant", "2 enfants ou plus"])]
+# --- B2: heterogeneity (Lausanne)
+GROUPS = [("Transit access", "transit_class", ORDER_T),
+          ("Income tercile (FTE)", "income_tercile", ["T1 (low)", "T2 (middle)", "T3 (high)"]),
+          ("Children < 16", "children_group", ["0 children", "1 child", "2 or more children"])]
 
 
 def by_group(data, fun, extra_total=True):
     out = []
     if extra_total:
-        out.append(("Ensemble", "Tous", data))
+        out.append(("Overall", "All", data))
     for title, var, levels in GROUPS:
         for lev in levels:
             out.append((title, lev, data[data[var] == lev]))
@@ -236,22 +270,22 @@ def by_group(data, fun, extra_total=True):
 
 rows = []
 for t, l, (a, b, d_, e) in by_group(LS, ext_stats):
-    n = LS[(LS.year == 2024)] if t == "Ensemble" else None
-    rows.append({"Dimension": t, "Groupe": l, "Part voiture 2024 (%)": pct(a), "Part voiture 2025 (%)": pct(b),
-                 "Variation (pp)": f"{d_:.1f}", "Élasticité extensive": f"{e:.2f}"})
+    n = LS[(LS.year == 2024)] if t == "Overall" else None
+    rows.append({"Dimension": t, "Group": l, "Car share 2024 (%)": pct(a), "Car share 2025 (%)": pct(b),
+                 "Change (pp)": f"{d_:.1f}", "Extensive elasticity": f"{e:.2f}"})
 tB2 = pd.DataFrame(rows)
-tB2.insert(2, "N employés", [len(g) // 2 for _, _, g in
+tB2.insert(2, "N employees", [len(g) // 2 for _, _, g in
                              [("", "", LS)] + [(0, 0, LS[LS[v] == lev]) for _, v, lv in GROUPS for lev in lv]])
 save(tB2, "table_B2")
 
 
-# --- B3 : modèle de probabilité linéaire
+# --- B3: linear probability model
 def fit(formula, data):
     return smf.ols(formula, data=data).fit(cov_type="cluster", cov_kwds={"groups": data.employee_id})
 
 
-CTRL = ("C(transit_class, Treatment('Bon')) + income_c + C(n_children) + log_dist + age_c + female + C(fte)")
-INTER = ("log_fee:C(transit_class, Treatment('Bon')) + log_fee:income_c + log_fee:C(n_children)")
+CTRL = ("C(transit_class, Treatment('Good')) + income_c + C(n_children) + log_dist + age_c + female + C(fte)")
+INTER = ("log_fee:C(transit_class, Treatment('Good')) + log_fee:income_c + log_fee:C(n_children)")
 
 
 def four_specs(dep, data_all):
@@ -259,31 +293,31 @@ def four_specs(dep, data_all):
     return {
         "(a) Lausanne": fit(f"{dep} ~ log_fee", lau),
         "(b) + Sion": fit(f"{dep} ~ log_fee + lausanne + post", data_all),
-        "(c) + contrôles": fit(f"{dep} ~ log_fee + lausanne + post + {CTRL}", data_all),
+        "(c) + controls": fit(f"{dep} ~ log_fee + lausanne + post + {CTRL}", data_all),
         "(d) + interactions": fit(f"{dep} ~ log_fee + lausanne + post + {CTRL} + {INTER}", data_all),
     }
 
 
 LABELS = [
-    ("log_fee", "log(tarif)"),
-    ("log_fee:C(transit_class, Treatment('Bon'))[T.Moyen]", "log(tarif) x accès TP moyen"),
-    ("log_fee:C(transit_class, Treatment('Bon'))[T.Faible]", "log(tarif) x accès TP faible"),
-    ("log_fee:income_c", "log(tarif) x revenu EPT (10 000 CHF, centré)"),
-    ("log_fee:C(n_children)[T.1]", "log(tarif) x 1 enfant"),
-    ("log_fee:C(n_children)[T.2]", "log(tarif) x 2 enfants ou plus"),
-    ("lausanne", "Site Lausanne"),
-    ("post", "Année 2025"),
-    ("C(transit_class, Treatment('Bon'))[T.Moyen]", "Accès TP moyen"),
-    ("C(transit_class, Treatment('Bon'))[T.Faible]", "Accès TP faible"),
-    ("income_c", "Revenu EPT (10 000 CHF, centré)"),
-    ("C(n_children)[T.1]", "1 enfant"),
-    ("C(n_children)[T.2]", "2 enfants ou plus"),
+    ("log_fee", "log(fee)"),
+    ("log_fee:C(transit_class, Treatment('Good'))[T.Medium]", "log(fee) x medium transit access"),
+    ("log_fee:C(transit_class, Treatment('Good'))[T.Poor]", "log(fee) x poor transit access"),
+    ("log_fee:income_c", "log(fee) x FTE income (CHF 10,000, centred)"),
+    ("log_fee:C(n_children)[T.1]", "log(fee) x 1 child"),
+    ("log_fee:C(n_children)[T.2]", "log(fee) x 2 or more children"),
+    ("lausanne", "Lausanne site"),
+    ("post", "Year 2025"),
+    ("C(transit_class, Treatment('Good'))[T.Medium]", "Medium transit access"),
+    ("C(transit_class, Treatment('Good'))[T.Poor]", "Poor transit access"),
+    ("income_c", "FTE income (CHF 10,000, centred)"),
+    ("C(n_children)[T.1]", "1 child"),
+    ("C(n_children)[T.2]", "2 or more children"),
     ("log_dist", "log(distance km)"),
-    ("age_c", "Âge (centré, années)"),
-    ("female", "Femme"),
-    ("C(fte)[T.0.8]", "Taux d'activité 0,8"),
-    ("C(fte)[T.1.0]", "Taux d'activité 1,0"),
-    ("Intercept", "Constante"),
+    ("age_c", "Age (centred, years)"),
+    ("female", "Female"),
+    ("C(fte)[T.0.8]", "Workload (FTE) 0.8"),
+    ("C(fte)[T.1.0]", "Workload (FTE) 1.0"),
+    ("Intercept", "Constant"),
 ]
 
 
@@ -303,24 +337,24 @@ def reg_table(models, extra_rows):
     for lab, fun in extra_rows:
         rows.append({"Variable": lab, **{n: fun(m) for n, m in models.items()}})
     rows.append({"Variable": "Observations", **{n: f"{int(m.nobs)}" for n, m in models.items()}})
-    rows.append({"Variable": "Employés (grappes)",
+    rows.append({"Variable": "Employees (clusters)",
                  **{n: f"{m.model.data.frame.employee_id.nunique()}" for n, m in models.items()}})
     rows.append({"Variable": "R2", **{n: f"{m.rsquared:.3f}" for n, m in models.items()}})
     return pd.DataFrame(rows)
 
 
 mB = four_specs("uses_car", df)
-tB3 = reg_table(mB, [("Effet d'un doublement du tarif (pp)",
+tB3 = reg_table(mB, [("Effect of doubling the fee (pp)",
                       lambda m: f"{100 * m.params['log_fee'] * np.log(2):.1f}")])
 save(tB3, "table_B3")
 for n, m in mB.items():
     b, se = m.params["log_fee"], m.bse["log_fee"]
-    note(f"[B3] {n}: coef log(tarif) = {b:.3f} (se {se:.3f}) ; doublement = {100 * b * np.log(2):.1f} pp "
-         f"[IC95 {100 * (b - 1.96 * se) * np.log(2):.1f} ; {100 * (b + 1.96 * se) * np.log(2):.1f}]")
+    note(f"[B3] {n}: coef log(fee) = {b:.3f} (se {se:.3f}); doubling = {100 * b * np.log(2):.1f} pp "
+         f"[95% CI {100 * (b - 1.96 * se) * np.log(2):.1f}; {100 * (b + 1.96 * se) * np.log(2):.1f}]")
 
 
 # =============================================================================
-# Partie C : marge intensive (automobilistes) et décomposition
+# Part C: intensive margin (drivers) and decomposition
 # =============================================================================
 CU = df[df.uses_car == 1].copy()
 CU["log_days"] = np.log(CU.car_days_per_week)
@@ -335,24 +369,24 @@ def int_stats(g):
 
 rows = []
 for t, l, (d0, d1, e, n0, n1) in by_group(LS, int_stats):
-    rows.append({"Dimension": t, "Groupe": l, "Jours/sem. 2024": f"{d0:.2f}", "Jours/sem. 2025": f"{d1:.2f}",
-                 "Élasticité intensive": f"{e:.2f}", "N automobilistes 2024": n0, "N automobilistes 2025": n1})
+    rows.append({"Dimension": t, "Group": l, "Days/week 2024": f"{d0:.2f}", "Days/week 2025": f"{d1:.2f}",
+                 "Intensive elasticity": f"{e:.2f}", "N drivers 2024": n0, "N drivers 2025": n1})
 tC1 = pd.DataFrame(rows)
 save(tC1, "table_C1")
 d0, d1, e_int, _, _ = int_stats(LS)
 d0S, d1S, _, _, _ = int_stats(SI)
-note(f"[C] Lausanne : jours/automobiliste {d0:.2f} -> {d1:.2f} ; élasticité intensive {e_int:.2f}")
-note(f"[C] Sion : jours/automobiliste {d0S:.2f} -> {d1S:.2f}")
+note(f"[C] Lausanne: days per driver {d0:.2f} -> {d1:.2f}; intensive elasticity {e_int:.2f}")
+note(f"[C] Sion: days per driver {d0S:.2f} -> {d1S:.2f}")
 
 mC = four_specs("log_days", CU)
-tC2 = reg_table(mC, [("Élasticité intensive (= coef. log(tarif))", lambda m: f"{m.params['log_fee']:.2f}"),
-                     ("Effet d'un doublement du tarif (%)",
+tC2 = reg_table(mC, [("Intensive elasticity (= coef. on log(fee))", lambda m: f"{m.params['log_fee']:.2f}"),
+                     ("Effect of doubling the fee (%)",
                       lambda m: f"{100 * (2 ** m.params['log_fee'] - 1):.1f}")])
 save(tC2, "table_C2")
 for n, m in mC.items():
-    note(f"[C2] {n}: élasticité {m.params['log_fee']:.3f} (se {m.bse['log_fee']:.3f})")
+    note(f"[C2] {n}: elasticity {m.params['log_fee']:.3f} (se {m.bse['log_fee']:.3f})")
 
-# Sélection : automobilistes 2024 vs 2025 à Lausanne, et restants vs sortants
+# Selection: 2024 vs 2025 drivers in Lausanne, and stayers vs leavers
 w_ls = LS.pivot(index="employee_id", columns="year", values="uses_car")
 e24 = LS[LS.year == 2024].set_index("employee_id")
 stay = w_ls[(w_ls[2024] == 1) & (w_ls[2025] == 1)].index
@@ -362,30 +396,30 @@ enter = w_ls[(w_ls[2024] == 0) & (w_ls[2025] == 1)].index
 
 def profile(ix):
     g = e24.loc[ix]
-    return pd.Series({"N": len(g), "Jours/sem. 2024": g.car_days_per_week.mean(),
-                      "Distance (km)": g.distance_km.mean(), "Accès TP faible (%)": 100 * (g.transit_class == "Faible").mean(),
-                      "Accès TP bon (%)": 100 * (g.transit_class == "Bon").mean(),
-                      "Revenu EPT (CHF)": g.income_fte.mean(), "Enfants (moy.)": g.n_children.mean()})
+    return pd.Series({"N": len(g), "Days/week 2024": g.car_days_per_week.mean(),
+                      "Distance (km)": g.distance_km.mean(), "Poor transit access (%)": 100 * (g.transit_class == "Poor").mean(),
+                      "Good transit access (%)": 100 * (g.transit_class == "Good").mean(),
+                      "FTE income (CHF)": g.income_fte.mean(), "Children (mean)": g.n_children.mean()})
 
 
 cu24 = LS[(LS.year == 2024) & (LS.uses_car == 1)].employee_id
 cu25 = LS[(LS.year == 2025) & (LS.uses_car == 1)].employee_id
-sel = pd.DataFrame({"Automobilistes 2024": profile(cu24), "Automobilistes 2025": profile(cu25),
-                    "Restent": profile(stay), "Quittent la voiture": profile(leave)}).round(2)
+sel = pd.DataFrame({"Drivers 2024": profile(cu24), "Drivers 2025": profile(cu25),
+                    "Stay": profile(stay), "Leave the car": profile(leave)}).round(2)
 save(sel, "table_C_selection", index=True)
-note("[C] sélection (caractéristiques 2024, Lausanne) :\n" + sel.to_string())
+note("[C] selection (2024 characteristics, Lausanne):\n" + sel.to_string())
 
-# Élasticité intensive intra-individuelle (automobilistes les deux années), effets fixes employé
+# Within-person intensive elasticity (drivers in both years), employee fixed effects
 stayers = CU[CU.employee_id.isin(CU.groupby("employee_id").size().loc[lambda s: s == 2].index)]
 m_fe = fit("log_days ~ log_fee + post + C(employee_id)", stayers)
-note(f"[C] élasticité intensive, automobilistes les deux années, effets fixes employé + année (Lausanne vs Sion) : "
+note(f"[C] intensive elasticity, drivers in both years, employee + year fixed effects (Lausanne vs Sion): "
      f"{m_fe.params['log_fee']:.3f} (se {m_fe.bse['log_fee']:.3f}), N = {int(m_fe.nobs)}")
-# variante sans plafonnement de E1001 : exclusion de la ligne
+# variant without capping E1001: drop the row
 m_drop = fit(f"log_days ~ log_fee + lausanne + post + {CTRL}", CU[CU.car_days_raw <= 5])
-note(f"[C] spécification (c) en excluant E1001-2025 au lieu de plafonner : {m_drop.params['log_fee']:.3f}")
+note(f"[C] specification (c) dropping E1001-2025 instead of capping: {m_drop.params['log_fee']:.3f}")
 
 
-# --- C3 : décomposition  ln(T) = ln(S) + ln(D),  T = jours voiture par employé
+# --- C3: decomposition  ln(T) = ln(S) + ln(D),  T = car days per employee
 def decomp(g):
     out = {}
     for y in (2024, 2025):
@@ -398,7 +432,7 @@ def decomp(g):
 
 
 def elast(dL, dS=None):
-    """élasticités (ext, int, total) ; si dS, nettes de la variation à Sion (tarif inchangé)."""
+    """elasticities (ext, int, total); if dS, net of the change in Sion (unchanged fee)."""
     e = [np.log(dL[2025][i] / dL[2024][i]) for i in range(3)]
     if dS is not None:
         e = [e[i] - np.log(dS[2025][i] / dS[2024][i]) for i in range(3)]
@@ -411,7 +445,7 @@ for y in (2024, 2025):
 e_raw, e_did = elast(dL), elast(dL, dS)
 
 
-# Bootstrap par grappe (employés, tirés à l'intérieur de chaque site)
+# Cluster bootstrap (employees, drawn within each site)
 def boot():
     ids_L = LS.employee_id.unique()
     ids_S = SI.employee_id.unique()
@@ -445,32 +479,32 @@ ci = lambda b: np.percentile(b, [2.5, 97.5], axis=0)
 ci_raw, ci_did = ci(b_raw), ci(b_did)
 
 rowsC3 = []
-for lab, i in [("Extensive : part d'automobilistes S", 0), ("Intensive : jours par automobiliste D", 1),
-               ("Totale : jours voiture par employé T = S x D", 2)]:
+for lab, i in [("Extensive: share of drivers S", 0), ("Intensive: days per driver D", 1),
+               ("Total: car days per employee T = S x D", 2)]:
     fmt = (lambda v: f"{100 * v:.1f} %") if i == 0 else (lambda v: f"{v:.2f}")
     rowsC3.append({
-        "Marge": lab,
+        "Margin": lab,
         "Lausanne 2024": fmt(dL[2024][i]), "Lausanne 2025": fmt(dL[2025][i]),
         "Sion 2024": fmt(dS[2024][i]), "Sion 2025": fmt(dS[2025][i]),
-        "Élasticité Lausanne avant-après": f"{e_raw[i]:.2f} [{ci_raw[0, i]:.2f} ; {ci_raw[1, i]:.2f}]",
-        "Élasticité nette de Sion": f"{e_did[i]:.2f} [{ci_did[0, i]:.2f} ; {ci_did[1, i]:.2f}]",
+        "Elasticity, Lausanne before-after": f"{e_raw[i]:.2f} [{ci_raw[0, i]:.2f}; {ci_raw[1, i]:.2f}]",
+        "Elasticity, net of Sion": f"{e_did[i]:.2f} [{ci_did[0, i]:.2f}; {ci_did[1, i]:.2f}]",
     })
 tC3 = pd.DataFrame(rowsC3)
 save(tC3, "table_C3")
-note(f"[C3] avant-après : ext {e_raw[0]:.3f} + int {e_raw[1]:.3f} = {e_raw[0] + e_raw[1]:.3f} ; total {e_raw[2]:.3f}")
-note(f"[C3] net de Sion : ext {e_did[0]:.3f} + int {e_did[1]:.3f} = {e_did[0] + e_did[1]:.3f} ; total {e_did[2]:.3f}")
-note(f"[C3] part de la marge extensive dans le total (net de Sion) : {100 * e_did[0] / e_did[2]:.0f} %")
+note(f"[C3] before-after: ext {e_raw[0]:.3f} + int {e_raw[1]:.3f} = {e_raw[0] + e_raw[1]:.3f}; total {e_raw[2]:.3f}")
+note(f"[C3] net of Sion: ext {e_did[0]:.3f} + int {e_did[1]:.3f} = {e_did[0] + e_did[1]:.3f}; total {e_did[2]:.3f}")
+note(f"[C3] share of the extensive margin in the total (net of Sion): {100 * e_did[0] / e_did[2]:.0f} %")
 
 
 # =============================================================================
-# Partie D : scénarios 2026 (site de Lausanne, 800 employés)
+# Part D: 2026 scenarios (Lausanne site, 800 employees)
 # =============================================================================
 N_LAU = LS.employee_id.nunique()
 S4, D4 = dL[2025][0], dL[2025][1]
 
 
 def scenario(eps_ext, eps_int, fees=SCENARIOS):
-    """Élasticités constantes appliquées depuis la base observée à 4 CHF : X(p) = X(4) * (p/4)^eps."""
+    """Constant elasticities applied from the observed CHF 4 baseline: X(p) = X(4) * (p/4)^eps."""
     rows = []
     for p in fees:
         S = S4 * (p / FEE_2025) ** eps_ext
@@ -483,13 +517,13 @@ def scenario(eps_ext, eps_int, fees=SCENARIOS):
 
 central = scenario(e_did[0], e_did[1])
 alt_raw = scenario(e_raw[0], e_raw[1])
-lo_ext, hi_ext = ci_did[:, 0]       # sensibilité : bornes de l'IC à 95 % de l'élasticité extensive
+lo_ext, hi_ext = ci_did[:, 0]       # sensitivity: 95% CI bounds of the extensive elasticity
 lo_int, hi_int = ci_did[:, 1]
-alt_lo = scenario(lo_ext, lo_int)   # réponse forte
-alt_hi = scenario(hi_ext, hi_int)   # réponse faible
+alt_lo = scenario(lo_ext, lo_int)   # strong response
+alt_hi = scenario(hi_ext, hi_int)   # weak response
 
-# Variante linéaire issue de la LPM (c) : S(p) = S4 + a * ln(p/4)
-a_c = mB["(c) + contrôles"].params["log_fee"]
+# Linear variant from LPM (c): S(p) = S4 + a * ln(p/4)
+a_c = mB["(c) + controls"].params["log_fee"]
 lpm = central.copy()
 lpm["S"] = S4 + a_c * np.log(lpm.fee / FEE_2025)
 lpm["T"] = lpm.S * lpm.D
@@ -499,24 +533,24 @@ rev_2025_obs = (LS[LS.year == 2025].car_days_per_week.sum() * WEEKS * FEE_2025)
 assert np.isclose(central.rev.iloc[0], rev_2025_obs)
 
 tD1 = pd.DataFrame({
-    "Tarif (CHF/jour)": central.fee.map(lambda p: f"{p} (base 2025)" if p == 4 else f"{p}"),
-    "Part voiture (%)": central.S.map(pct),
-    "Jours par automobiliste": central.D.map(lambda v: f"{v:.2f}"),
-    "Jours voiture par employé": central["T"].map(lambda v: f"{v:.2f}"),
-    "Recette annuelle (milliers CHF)": central.rev.map(lambda v: f"{v / 1000:.0f}"),
-    "Sensibilité : part voiture, bornes IC95 (%)": [f"{pct(l)} à {pct(h)}" if p != 4 else "" for p, l, h in
+    "Fee (CHF/day)": central.fee.map(lambda p: f"{p} (2025 baseline)" if p == 4 else f"{p}"),
+    "Car share (%)": central.S.map(pct),
+    "Days per driver": central.D.map(lambda v: f"{v:.2f}"),
+    "Car days per employee": central["T"].map(lambda v: f"{v:.2f}"),
+    "Annual revenue (thousand CHF)": central.rev.map(lambda v: f"{v / 1000:.0f}"),
+    "Sensitivity: car share, 95% CI bounds (%)": [f"{pct(l)} to {pct(h)}" if p != 4 else "" for p, l, h in
                                              zip(central.fee, alt_lo.S, alt_hi.S)],
-    "Sensibilité : avant-après sans Sion, part voiture (%)": alt_raw.S.map(pct),
-    "Sensibilité : LPM (c) linéaire, part voiture (%)": lpm.S.map(pct),
-    "Sensibilité : recette, bornes IC95 (milliers CHF)": [f"{l / 1000:.0f} à {h / 1000:.0f}" if p != 4 else "" for p, l, h in
+    "Sensitivity: before-after without Sion, car share (%)": alt_raw.S.map(pct),
+    "Sensitivity: linear LPM (c), car share (%)": lpm.S.map(pct),
+    "Sensitivity: revenue, 95% CI bounds (thousand CHF)": [f"{l / 1000:.0f} to {h / 1000:.0f}" if p != 4 else "" for p, l, h in
                                                   zip(central.fee, alt_lo.rev, alt_hi.rev)],
 })
 save(tD1, "table_D1")
-note(f"[D] élasticités centrales (nettes de Sion) : extensive {e_did[0]:.3f}, intensive {e_did[1]:.3f}")
-note("[D] scénario central :\n" + central.round(4).to_string())
-note(f"[D] recette 2024 observée Lausanne : {LS[LS.year == 2024].car_days_per_week.sum() * WEEKS * FEE_2024:,.0f} CHF")
+note(f"[D] central elasticities (net of Sion): extensive {e_did[0]:.3f}, intensive {e_did[1]:.3f}")
+note("[D] central scenario:\n" + central.round(4).to_string())
+note(f"[D] observed 2024 revenue, Lausanne: {chf(LS[LS.year == 2024].car_days_per_week.sum() * WEEKS * FEE_2024)} CHF")
 
-# --- Figure D1 : deux panneaux (pas de double axe)
+# --- Figure D1: two panels (no dual axis)
 BLUE, ORANGE, INK, MUTED = "#2a78d6", "#eb6834", "#1f1f1e", "#6b6a64"
 plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
                      "xtick.color": MUTED, "ytick.color": MUTED, "axes.spines.top": False,
@@ -524,21 +558,21 @@ plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor":
 fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.0))
 x = central.fee
 for ax, col, scale, ylab, title in [
-        (axes[0], "S", 100, "Part d'employés venant en voiture (%)", "Part voiture"),
-        (axes[1], "rev", 1e-3, "Recette annuelle (milliers CHF)", "Recette de parking")]:
+        (axes[0], "S", 100, "Employees commuting by car (%)", "Car share"),
+        (axes[1], "rev", 1e-3, "Annual revenue (thousand CHF)", "Parking revenue")]:
     ax.fill_between(x, alt_lo[col] * scale, alt_hi[col] * scale, color=BLUE, alpha=0.15, lw=0,
-                    label="Bornes des IC 95 % (ext. et int.)")
-    ax.plot(x, central[col] * scale, color=BLUE, lw=2, marker="o", ms=4, label="Central (net de Sion)")
+                    label="95% CI bounds (ext. and int.)")
+    ax.plot(x, central[col] * scale, color=BLUE, lw=2, marker="o", ms=4, label="Central (net of Sion)")
     ax.plot(x, alt_raw[col] * scale, color=ORANGE, lw=2, ls="--", marker="s", ms=4,
-            label="Lausanne avant-après")
+            label="Lausanne before-after")
     ax.axvspan(8, 10.5, color="#efefec", zorder=0)
     ax.set_xlim(3.7, 10.3)
     ax.set_xticks(SCENARIOS)
-    ax.set_xlabel("Tarif journalier (CHF)")
+    ax.set_xlabel("Daily fee (CHF)")
     ax.set_ylabel(ylab)
     ax.set_title(title, loc="left", fontsize=10, color=INK)
     ax.grid(axis="y", color="#e2e1dc", lw=0.6)
-    ax.text(8.1, ax.get_ylim()[0] + 0.03 * np.ptp(ax.get_ylim()), "au-delà d'un\nnouveau doublement",
+    ax.text(8.1, ax.get_ylim()[0] + 0.03 * np.ptp(ax.get_ylim()), "beyond a second\ndoubling",
             fontsize=7, color=MUTED, va="bottom")
 axes[0].legend(frameon=False, fontsize=7, loc="upper right")
 fig.tight_layout()
@@ -548,17 +582,17 @@ plt.close(fig)
 
 
 # =============================================================================
-# Partie E : incidence (dépense annuelle de parking en % du revenu brut observé)
+# Part E: incidence (annual parking spending as % of observed gross income)
 # =============================================================================
 E = df[df.year == 2025].copy()
 E["spend"] = E.parking_fee_chf * E.car_days_per_week * WEEKS
 E["burden"] = 100 * E.spend / E.gross_income_chf
-# projection au tarif recommandé (Lausanne seulement) : élasticités propres à chaque classe d'accès TP
-# (Lausanne avant-après, Tables B2 et C1), car l'accès TP est la dimension où la réponse diffère le plus ;
-# chaque automobiliste 2025 conduit encore avec probabilité (p/4)^eps_ext et réduit ses jours de (p/4)^eps_int
+# projection at the recommended fee (Lausanne only): elasticities specific to each transit access class
+# (Lausanne before-after, Tables B2 and C1), since transit access is the dimension where the response differs most;
+# each 2025 driver still drives with probability (p/4)^eps_ext and scales days by (p/4)^eps_int
 ratio = RECO_FEE / FEE_2025
 eps_cls = {c: (ext_stats(LS[LS.transit_class == c])[3], int_stats(LS[LS.transit_class == c])[2]) for c in ORDER_T}
-note("[E] élasticités (ext, int) par classe TP utilisées pour la projection :",
+note("[E] elasticities (ext, int) by transit class used for the projection:",
      {c: (round(a, 3), round(b, 3)) for c, (a, b) in eps_cls.items()})
 e_ext_i = E.transit_class.map(lambda c: eps_cls[c][0]).astype(float)
 e_int_i = E.transit_class.map(lambda c: eps_cls[c][1]).astype(float)
@@ -568,27 +602,27 @@ E["burden_reco_all"] = np.where(E.uses_car == 1, E.burden_reco_driver * ratio **
 
 EL = E[E.site == "Lausanne"]
 rows = []
-for t, l, g in [("Ensemble", "Tous", EL)] + [(t, lev, EL[EL[v] == lev]) for t, v, lv in GROUPS for lev in lv]:
+for t, l, g in [("Overall", "All", EL)] + [(t, lev, EL[EL[v] == lev]) for t, v, lv in GROUPS for lev in lv]:
     dr = g[g.uses_car == 1]
-    rows.append({"Dimension": t, "Groupe": l, "N employés": len(g), "N automobilistes 2025": len(dr),
-                 "(a) Tous les employés, 2025 (%)": f"{g.burden.mean():.2f}",
-                 "(b) Automobilistes 2025 (%)": f"{dr.burden.mean():.2f}",
-                 f"(b) Dépense moyenne automobilistes 2025 (CHF/an)": f"{dr.spend.mean():.0f}",
-                 f"(c) Tous, à {RECO_FEE} CHF (%)": f"{g.burden_reco_all.mean():.2f}",
-                 f"(c) Automobilistes restants, à {RECO_FEE} CHF (%)": f"{dr.burden_reco_driver.mean():.2f}",
-                 "Part de la recette 2025 (%)": pct(g.spend.sum() / EL.spend.sum())})
+    rows.append({"Dimension": t, "Group": l, "N employees": len(g), "N drivers 2025": len(dr),
+                 "(a) All employees, 2025 (%)": f"{g.burden.mean():.2f}",
+                 "(b) Drivers 2025 (%)": f"{dr.burden.mean():.2f}",
+                 f"(b) Mean spending of 2025 drivers (CHF/year)": f"{dr.spend.mean():.0f}",
+                 f"(c) All, at CHF {RECO_FEE} (%)": f"{g.burden_reco_all.mean():.2f}",
+                 f"(c) Remaining drivers, at CHF {RECO_FEE} (%)": f"{dr.burden_reco_driver.mean():.2f}",
+                 "Share of 2025 revenue (%)": pct(g.spend.sum() / EL.spend.sum())})
 ES = E[E.site == "Sion"]
 drS = ES[ES.uses_car == 1]
-rows.append({"Dimension": "Référence", "Groupe": "Sion (2 CHF)", "N employés": len(ES),
-             "N automobilistes 2025": len(drS), "(a) Tous les employés, 2025 (%)": f"{ES.burden.mean():.2f}",
-             "(b) Automobilistes 2025 (%)": f"{drS.burden.mean():.2f}",
-             "(b) Dépense moyenne automobilistes 2025 (CHF/an)": f"{drS.spend.mean():.0f}",
-             f"(c) Tous, à {RECO_FEE} CHF (%)": "", f"(c) Automobilistes restants, à {RECO_FEE} CHF (%)": "",
-             "Part de la recette 2025 (%)": ""})
+rows.append({"Dimension": "Reference", "Group": "Sion (CHF 2)", "N employees": len(ES),
+             "N drivers 2025": len(drS), "(a) All employees, 2025 (%)": f"{ES.burden.mean():.2f}",
+             "(b) Drivers 2025 (%)": f"{drS.burden.mean():.2f}",
+             "(b) Mean spending of 2025 drivers (CHF/year)": f"{drS.spend.mean():.0f}",
+             f"(c) All, at CHF {RECO_FEE} (%)": "", f"(c) Remaining drivers, at CHF {RECO_FEE} (%)": "",
+             "Share of 2025 revenue (%)": ""})
 tE1 = pd.DataFrame(rows)
 save(tE1, "table_E1")
-note(f"[E] taux d'effort max individuel 2025 (Lausanne) : {EL.burden.max():.2f} % ; "
-     f"part des automobilistes au-dessus de 1 % : {pct((EL[EL.uses_car == 1].burden > 1).mean())} %")
+note(f"[E] maximum individual burden 2025 (Lausanne): {EL.burden.max():.2f} %; "
+     f"share of drivers above 1 %: {pct((EL[EL.uses_car == 1].burden > 1).mean())} %")
 
 (OUT / "results.txt").write_text("\n".join(LOG) + "\n")
-print(f"\nTableaux écrits dans {TAB}, figure dans {FIG}")
+print(f"\nTables written to {TAB}, figure to {FIG}")
