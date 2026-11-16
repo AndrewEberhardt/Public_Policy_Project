@@ -681,28 +681,39 @@ BLUE, ORANGE, INK, MUTED = "#2a78d6", "#eb6834", "#1f1f1e", "#6b6a64"
 plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
                      "xtick.color": MUTED, "ytick.color": MUTED, "axes.spines.top": False,
                      "axes.spines.right": False})
-fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.0))
+fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.6))
 x = central.fee
-for ax, col, scale, ylab, title in [
-        (axes[0], "S", 100, "Employees commuting by car (%)", "Car share"),
-        (axes[1], "rev", 1e-3, "Annual revenue (thousand CHF)", "Parking revenue")]:
+CREDIBLE_MAX = 8   # one more doubling from CHF 4, same log change as observed (2 -> 4)
+for ax, col, scale, ylab, title, label_top in [
+        (axes[0], "S", 100, "Employees commuting by car (%)", "A. Car share (main behavioural outcome)", True),
+        (axes[1], "rev", 1e-3, "Annual parking revenue (thousand CHF)", "B. Annual parking revenue", False)]:
+    ax.axvspan(CREDIBLE_MAX, 10.5, color="#efefec", zorder=0, lw=0)
+    ax.axvline(CREDIBLE_MAX, color=MUTED, lw=0.8, ls=":", zorder=1)
     ax.fill_between(x, alt_lo[col] * scale, alt_hi[col] * scale, color=BLUE, alpha=0.15, lw=0,
-                    label="95% CI bounds (ext. and int.)")
-    ax.plot(x, central[col] * scale, color=BLUE, lw=2, marker="o", ms=4, label="Central (net of Sion)")
+                    label="Central forecast, range from the 95% CIs of the elasticities")
+    ax.plot(x, central[col] * scale, color=BLUE, lw=2, marker="o", ms=4,
+            label="Central forecast (elasticities net of Sion)")
     ax.plot(x, alt_raw[col] * scale, color=ORANGE, lw=2, ls="--", marker="s", ms=4,
-            label="Lausanne before-after")
-    ax.axvspan(8, 10.5, color="#efefec", zorder=0)
+            label="Alternative forecast (Lausanne before-after elasticities)")
+    ax.plot([FEE_2025], [central[col].iloc[0] * scale], color=INK, marker="D", ms=6, ls="none", zorder=5,
+            label="Observed in 2025 (CHF 4)")
     ax.set_xlim(3.7, 10.3)
     ax.set_xticks(SCENARIOS)
-    ax.set_xlabel("Daily fee (CHF)")
+    ax.set_xlabel("Daily parking fee (CHF)")
     ax.set_ylabel(ylab)
-    ax.set_title(title, loc="left", fontsize=10, color=INK)
+    ax.set_title(title, loc="left", fontsize=9.5, color=INK)
     ax.grid(axis="y", color="#e2e1dc", lw=0.6)
-    ax.text(8.1, ax.get_ylim()[0] + 0.03 * np.ptp(ax.get_ylim()), "beyond a second\ndoubling",
-            fontsize=7, color=MUTED, va="bottom")
-axes[0].legend(frameon=False, fontsize=7, loc="upper right")
-fig.tight_layout()
-fig.savefig(FIG / "figure_D1.pdf")
+    lo_y, hi_y = ax.get_ylim()   # label placed where it does not cover the lines
+    ax.text(CREDIBLE_MAX + 0.15, hi_y - 0.03 * (hi_y - lo_y) if label_top else lo_y + 0.03 * (hi_y - lo_y),
+            "Extrapolation\nbeyond CHF 8", fontsize=7, color=MUTED, va="top" if label_top else "bottom")
+handles, labels = axes[0].get_legend_handles_labels()
+order = [3, 1, 0, 2]   # observed, central, CI range, alternative
+fig.legend([handles[k] for k in order], [labels[k] for k in order], loc="lower center", ncol=2, frameon=False,
+           fontsize=7.5)
+fig.suptitle("Figure D1. Lausanne site (800 employees): forecast car share and parking revenue by daily fee",
+             x=0.01, ha="left", fontsize=10, color=INK)
+fig.tight_layout(rect=(0, 0.12, 1, 0.97))
+fig.savefig(FIG / "figure_D1.pdf", metadata={"CreationDate": None})
 fig.savefig(FIG / "figure_D1.png", dpi=200)
 plt.close(fig)
 
