@@ -309,7 +309,11 @@ def fit(formula, data):
     return smf.ols(formula, data=data).fit(cov_type="cluster", cov_kwds={"groups": data.employee_id})
 
 
-CTRL = ("C(transit_class, Treatment('Good')) + income_c + C(n_children) + log_dist + age_c + female + C(fte)")
+# transit classes are terciles within each site (Part A), so "Poor" does not mean the same level of access in Lausanne
+# and Sion: the class effects are allowed to differ by site (C(transit_class):lausanne). Sion then only provides the
+# common 2024-2025 trend, whatever the definition of its classes.
+CTRL = ("C(transit_class, Treatment('Good')) + C(transit_class, Treatment('Good')):lausanne"
+        " + income_c + C(n_children) + log_dist + age_c + female + C(fte)")
 INTER = ("log_fee:C(transit_class, Treatment('Good')) + log_fee:income_c + log_fee:C(n_children)")
 
 
@@ -325,40 +329,40 @@ def four_specs(dep, data_all):
 
 LABELS = [
     ("log_fee", "log(fee)"),
-    ("log_fee:C(transit_class, Treatment('Good'))[T.Medium]", "log(fee) x medium transit access"),
-    ("log_fee:C(transit_class, Treatment('Good'))[T.Poor]", "log(fee) x poor transit access"),
-    ("log_fee:income_c", "log(fee) x FTE income (CHF 10,000, centred)"),
+    ("log_fee:C(transit_class, Treatment('Good'))[T.Medium]", "log(fee) x Medium access"),
+    ("log_fee:C(transit_class, Treatment('Good'))[T.Poor]", "log(fee) x Poor access"),
+    ("log_fee:income_c", "log(fee) x income (FTE, CHF 10'000)"),
     ("log_fee:C(n_children)[T.1]", "log(fee) x 1 child"),
     ("log_fee:C(n_children)[T.2]", "log(fee) x 2 or more children"),
     ("lausanne", "Lausanne site"),
     ("post", "Year 2025"),
-    ("C(transit_class, Treatment('Good'))[T.Medium]", "Medium transit access"),
-    ("C(transit_class, Treatment('Good'))[T.Poor]", "Poor transit access"),
-    ("income_c", "FTE income (CHF 10,000, centred)"),
+    ("C(transit_class, Treatment('Good'))[T.Medium]", "Medium access"),
+    ("C(transit_class, Treatment('Good'))[T.Poor]", "Poor access"),
+    ("C(transit_class, Treatment('Good'))[T.Medium]:lausanne", "Medium access x Lausanne"),
+    ("C(transit_class, Treatment('Good'))[T.Poor]:lausanne", "Poor access x Lausanne"),
+    ("income_c", "Income (FTE, CHF 10'000)"),
     ("C(n_children)[T.1]", "1 child"),
     ("C(n_children)[T.2]", "2 or more children"),
     ("log_dist", "log(distance km)"),
-    ("age_c", "Age (centred, years)"),
+    ("age_c", "Age (years)"),
     ("female", "Female"),
-    ("C(fte)[T.0.8]", "Workload (FTE) 0.8"),
-    ("C(fte)[T.1.0]", "Workload (FTE) 1.0"),
+    ("C(fte)[T.0.8]", "FTE 0.8"),
+    ("C(fte)[T.1.0]", "FTE 1.0"),
     ("Intercept", "Constant"),
 ]
 
 
 def reg_table(models, extra_rows):
+    """One row per variable: coefficient, stars and clustered standard error in the same cell (compact table)."""
     rows = []
     for key, lab in LABELS:
         if not any(key in m.params for m in models.values()):
             continue
-        cr, sr = {"Variable": lab}, {"Variable": ""}
+        row = {"Variable": lab}
         for name, m in models.items():
-            if key in m.params:
-                cr[name] = f"{m.params[key]:.3f}{stars(m.pvalues[key])}"
-                sr[name] = f"({m.bse[key]:.3f})"
-            else:
-                cr[name] = sr[name] = ""
-        rows += [cr, sr]
+            row[name] = (f"{m.params[key]:.3f}{stars(m.pvalues[key])} ({m.bse[key]:.3f})"
+                         if key in m.params else "")
+        rows.append(row)
     for lab, fun in extra_rows:
         rows.append({"Variable": lab, **{n: fun(m) for n, m in models.items()}})
     rows.append({"Variable": "Observations", **{n: f"{int(m.nobs)}" for n, m in models.items()}})
@@ -376,6 +380,25 @@ for n, m in mB.items():
     b, se = m.params["log_fee"], m.bse["log_fee"]
     note(f"[B3] {n}: coef log(fee) = {b:.3f} (se {se:.3f}); doubling = {100 * b * np.log(2):.1f} pp "
          f"[95% CI {100 * (b - 1.96 * se) * np.log(2):.1f}; {100 * (b + 1.96 * se) * np.log(2):.1f}]")
+
+
+def doubling_effect(m, terms):
+    """Effect of doubling the fee (pp) for a group = (sum of coefficients) x ln(2), with 95% CI."""
+    r = np.array([float(n in terms) for n in m.params.index])
+    t = m.t_test(r)
+    b, se = float(np.ravel(t.effect)[0]), float(np.ravel(t.sd)[0])
+    return f"{100 * b * np.log(2):.1f} pp [95% CI {100 * (b - 1.96 * se) * np.log(2):.1f}; " \
+           f"{100 * (b + 1.96 * se) * np.log(2):.1f}]"
+
+
+TC = "C(transit_class, Treatment('Good'))"
+GROUP_TERMS = [("reference (Good access, 0 children, mean income)", ["log_fee"]),
+               ("medium transit access", ["log_fee", f"log_fee:{TC}[T.Medium]"]),
+               ("poor transit access", ["log_fee", f"log_fee:{TC}[T.Poor]"]),
+               ("1 child", ["log_fee", "log_fee:C(n_children)[T.1]"]),
+               ("2 or more children", ["log_fee", "log_fee:C(n_children)[T.2]"])]
+for lab, terms in GROUP_TERMS:
+    note(f"[B3] (d) effect of doubling the fee, {lab}: {doubling_effect(mB['(d) + interactions'], terms)}")
 
 
 # =============================================================================

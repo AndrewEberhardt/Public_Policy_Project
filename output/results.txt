@@ -31,13 +31,18 @@ Sion     Good               47.5      5.4  122
 [B3] (a) Lausanne: coef log(fee) = -0.144 (se 0.015); doubling = -10.0 pp [95% CI -12.1; -7.9]
 [B3] (b) + Sion: coef log(fee) = -0.188 (se 0.023); doubling = -13.0 pp [95% CI -16.2; -9.8]
 [B3] (c) + controls: coef log(fee) = -0.188 (se 0.023); doubling = -13.0 pp [95% CI -16.2; -9.8]
-[B3] (d) + interactions: coef log(fee) = -0.258 (se 0.036); doubling = -17.9 pp [95% CI -22.8; -13.0]
+[B3] (d) + interactions: coef log(fee) = -0.248 (se 0.034); doubling = -17.2 pp [95% CI -21.8; -12.6]
+[B3] (d) effect of doubling the fee, reference (Good access, 0 children, mean income): -17.2 pp [95% CI -21.8; -12.6]
+[B3] (d) effect of doubling the fee, medium transit access: -16.2 pp [95% CI -21.8; -10.5]
+[B3] (d) effect of doubling the fee, poor transit access: -6.9 pp [95% CI -11.3; -2.4]
+[B3] (d) effect of doubling the fee, 1 child: -18.4 pp [95% CI -25.7; -11.0]
+[B3] (d) effect of doubling the fee, 2 or more children: -9.0 pp [95% CI -14.9; -3.2]
 [C] Lausanne: days per driver 3.60 -> 3.45; intensive elasticity -0.06
 [C] Sion: days per driver 3.55 -> 3.65
 [C2] (a) Lausanne: elasticity -0.077 (se 0.015)
 [C2] (b) + Sion: elasticity -0.114 (se 0.022)
-[C2] (c) + controls: elasticity -0.151 (se 0.021)
-[C2] (d) + interactions: elasticity -0.305 (se 0.033)
+[C2] (c) + controls: elasticity -0.152 (se 0.021)
+[C2] (d) + interactions: elasticity -0.294 (se 0.031)
 [C] selection (2024 characteristics, Lausanne):
                          Drivers 2024  Drivers 2025       Stay  Leave the car
 N                              431.00        351.00     351.00          80.00
@@ -48,7 +53,7 @@ Good transit access (%)         40.84         35.04      35.04          66.25
 FTE income (CHF)            102891.84     104764.48  104764.48       94675.62
 Children (mean)                  0.89          0.97       0.97           0.54
 [C] intensive elasticity, drivers in both years, employee + year fixed effects (Lausanne vs Sion): -0.161 (se 0.028), N = 936
-[C] specification (c) dropping E1001-2025 instead of capping: -0.152
+[C] specification (c) dropping E1001-2025 instead of capping: -0.154
 [C3] before-after: ext -0.296 + int -0.062 = -0.358; total -0.358
 [C3] net of Sion: ext -0.368 + int -0.102 = -0.471; total -0.471
 [C3] share of the extensive margin in the total (net of Sion): 78 %
