@@ -613,25 +613,67 @@ lpm["S"] = S4 + a_c * np.log(lpm.fee / FEE_2025)
 lpm["T"] = lpm.S * lpm.D
 lpm["rev"] = lpm.fee * lpm["T"] * WEEKS * N_LAU
 
+# Heterogeneity-aware variant: elasticities specific to each transit access class (Lausanne before-after, Tables B2
+# and C1), applied class by class and aggregated. As the fee rises, the remaining drivers are increasingly those with
+# poor transit access, who respond little: the aggregate response slows down (selection, Part C).
+eps_cls = {c: (ext_stats(LS[LS.transit_class == c])[3], int_stats(LS[LS.transit_class == c])[2]) for c in ORDER_T}
+L25 = LS[LS.year == 2025]
+
+
+def scenario_by_class(fees=SCENARIOS):
+    rows = []
+    for p in fees:
+        n_drv = days = 0.0
+        for c, (ee, ei) in eps_cls.items():
+            g = L25[L25.transit_class == c]
+            s_c = g.uses_car.mean() * (p / FEE_2025) ** ee
+            d_c = g[g.uses_car == 1].car_days_per_week.mean() * (p / FEE_2025) ** ei
+            n_drv += s_c * len(g)
+            days += s_c * d_c * len(g)
+        S = n_drv / len(L25)
+        T = days / len(L25)
+        rows.append({"fee": p, "S": S, "D": T / S, "T": T, "rev": p * T * WEEKS * N_LAU})
+    return pd.DataFrame(rows)
+
+
+by_class = scenario_by_class()
+assert np.isclose(by_class.S.iloc[0], S4) and np.isclose(by_class.rev.iloc[0], central.rev.iloc[0])
+share_poor = [(L25[L25.transit_class == "Poor"].uses_car.mean() * (p / FEE_2025) ** eps_cls["Poor"][0]
+               * (L25.transit_class == "Poor").sum()) / (by_class.S.iloc[k] * len(L25))
+              for k, p in enumerate(SCENARIOS)]
+
 rev_2025_obs = (LS[LS.year == 2025].car_days_per_week.sum() * WEEKS * FEE_2025)
 assert np.isclose(central.rev.iloc[0], rev_2025_obs)
 
 tD1 = pd.DataFrame({
-    "Fee (CHF/day)": central.fee.map(lambda p: f"{p} (2025 baseline)" if p == 4 else f"{p}"),
+    "Fee (CHF/day)": central.fee.map(lambda p: f"{p} (2025)" if p == 4 else f"{p}"),
     "Car share (%)": central.S.map(pct),
+    "Car share, 95% CI (%)": ["" if p == 4 else f"{pct(l)} to {pct(h)}"
+                              for p, l, h in zip(central.fee, alt_lo.S, alt_hi.S)],
     "Days per driver": central.D.map(lambda v: f"{v:.2f}"),
     "Car days per employee": central["T"].map(lambda v: f"{v:.2f}"),
     "Annual revenue (thousand CHF)": central.rev.map(lambda v: f"{v / 1000:.0f}"),
-    "Sensitivity: car share, 95% CI bounds (%)": [f"{pct(l)} to {pct(h)}" if p != 4 else "" for p, l, h in
-                                             zip(central.fee, alt_lo.S, alt_hi.S)],
-    "Sensitivity: before-after without Sion, car share (%)": alt_raw.S.map(pct),
-    "Sensitivity: linear LPM (c), car share (%)": lpm.S.map(pct),
-    "Sensitivity: revenue, 95% CI bounds (thousand CHF)": [f"{l / 1000:.0f} to {h / 1000:.0f}" if p != 4 else "" for p, l, h in
-                                                  zip(central.fee, alt_lo.rev, alt_hi.rev)],
 })
 save(tD1, "table_D1")
 note(f"[D] central elasticities (net of Sion): extensive {e_did[0]:.3f}, intensive {e_did[1]:.3f}")
 note("[D] central scenario:\n" + central.round(4).to_string())
+sens = pd.DataFrame({"fee": SCENARIOS,
+                     "central S (%)": central.S.map(pct), "CI bounds S (%)": [f"{pct(l)} to {pct(h)}" for l, h in
+                                                                             zip(alt_lo.S, alt_hi.S)],
+                     "before-after S (%)": alt_raw.S.map(pct), "by transit class S (%)": by_class.S.map(pct),
+                     "linear LPM (c) S (%)": lpm.S.map(pct),
+                     "central rev (kCHF)": (central.rev / 1000).round(0).astype(int),
+                     "CI bounds rev (kCHF)": [f"{l / 1000:.0f} to {h / 1000:.0f}" for l, h in zip(alt_lo.rev, alt_hi.rev)],
+                     "before-after rev (kCHF)": (alt_raw.rev / 1000).round(0).astype(int),
+                     "by transit class rev (kCHF)": (by_class.rev / 1000).round(0).astype(int),
+                     "Poor access among drivers, by class (%)": [pct(x) for x in share_poor]})
+note("[D] sensitivity (car share S and revenue):\n" + sens.to_string(index=False))
+for _, r in central.iloc[1:].iterrows():
+    note(f"[D] central, CHF {r.fee:g}: {r.S * N_LAU:.0f} drivers (2025: {S4 * N_LAU:.0f}), car share "
+         f"{100 * (r.S - S4):+.1f} pp, car days per employee {100 * (r['T'] / central['T'].iloc[0] - 1):+.1f} %, "
+         f"revenue {100 * (r.rev / central.rev.iloc[0] - 1):+.1f} %")
+note(f"[D] total elasticity (net of Sion) {e_did[2]:.2f}: revenue rises by {100 * (1 + e_did[2]):.0f} % of each % "
+     f"increase in the fee (constant elasticity, no revenue maximum)")
 note(f"[D] observed 2024 revenue, Lausanne: {chf(LS[LS.year == 2024].car_days_per_week.sum() * WEEKS * FEE_2024)} CHF")
 
 # --- Figure D1: two panels (no dual axis)
@@ -675,7 +717,7 @@ E["burden"] = 100 * E.spend / E.gross_income_chf
 # (Lausanne before-after, Tables B2 and C1), since transit access is the dimension where the response differs most;
 # each 2025 driver still drives with probability (p/4)^eps_ext and scales days by (p/4)^eps_int
 ratio = RECO_FEE / FEE_2025
-eps_cls = {c: (ext_stats(LS[LS.transit_class == c])[3], int_stats(LS[LS.transit_class == c])[2]) for c in ORDER_T}
+# eps_cls: elasticities by transit class, defined in Part D
 note("[E] elasticities (ext, int) by transit class used for the projection:",
      {c: (round(a, 3), round(b, 3)) for c, (a, b) in eps_cls.items()})
 e_ext_i = E.transit_class.map(lambda c: eps_cls[c][0]).astype(float)
