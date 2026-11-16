@@ -12,6 +12,18 @@ transit_class  Good  Medium  Poor
 site                             
 Lausanne        426     240   134
 Sion            122      55    23
+[A] 2024 car share (%), mean reported distance (km) and employees, by site and class:
+                       car_share distance    n
+site     transit_class                        
+Lausanne Good               41.3      5.8  426
+         Medium             57.5      8.5  240
+         Poor               87.3     16.2  134
+Sion     Good               47.5      5.4  122
+         Medium             70.9      8.9   55
+         Poor               87.0     21.2   23
+[A] Spearman rank correlation transit score vs 2024 car share by municipality: -0.62
+[A] sensitivity, equal weights (1/3 each): Spearman with the main score 0.99; municipalities changing class: 4 of 39 (Ecublens, Prilly, Ayent, Nendaz)
+[A] sensitivity, PT/car ratio only: Spearman with the main score 0.85; municipalities changing class: 10 of 39 (Lausanne, Ecublens, Lutry, Bussigny, Mézières, Bottens, Sion, Vétroz, Vex, Evolène)
 [B1] Lausanne, 2025 mode of 2024 drivers who leave the car: {'bus': 59, 'bike': 21}
 [B] Lausanne: car share 53.9 % -> 43.9 %; -10.0 pp; extensive elasticity -0.30
 [B] Sion: car share 58.5 % -> 61.5 %; 3.0 pp

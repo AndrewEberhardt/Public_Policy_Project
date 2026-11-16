@@ -200,6 +200,31 @@ note(f"[A] correlation transit score vs mean reported distance: {v.transit_score
 note("[A] employees by class and site:\n" +
      pd.crosstab(df[df.year == 2024].site, df[df.year == 2024].transit_class).to_string())
 
+# Validation (behavioural plausibility): 2024 car share and distance by class, before any fee change
+d24 = df[df.year == 2024]
+val = (d24.groupby(["site", "transit_class"], observed=True)
+       .agg(car_share=("uses_car", "mean"), distance=("distance_km", "mean"), n=("uses_car", "size")))
+val["car_share"] = val.car_share.map(pct)
+val["distance"] = val.distance.map("{:.1f}".format)
+note("[A] 2024 car share (%), mean reported distance (km) and employees, by site and class:\n" + val.to_string())
+rho = ta.set_index(["site", "commune_key"]).transit_score.rank().corr(
+    d24.groupby(["site", "commune_key"]).uses_car.mean().rank())
+note(f"[A] Spearman rank correlation transit score vs 2024 car share by municipality: {rho:.2f}")
+
+
+# Validation (robustness to the weights): equal weights, and ratio-only score
+def classes_with(w_ratio, w_dep, w_first):
+    s = w_ratio * z(-np.log(ta.pt_car_ratio)) + w_dep * z(np.log(ta.departures_06_09)) + w_first * z(-first)
+    c = s.groupby(ta.site).transform(lambda x: pd.qcut(x, 3, labels=["Poor", "Medium", "Good"]).astype(str))
+    return s, c
+
+
+for label, w in [("equal weights (1/3 each)", (1 / 3, 1 / 3, 1 / 3)), ("PT/car ratio only", (1, 0, 0))]:
+    s_alt, c_alt = classes_with(*w)
+    changed = ta.home_commune[c_alt != ta.transit_class].replace(ACCENTS).tolist()
+    note(f"[A] sensitivity, {label}: Spearman with the main score {s_alt.rank().corr(score.rank()):.2f}; "
+         f"municipalities changing class: {len(changed)} of {len(ta)} ({', '.join(changed) or 'none'})")
+
 
 # =============================================================================
 # Part B: extensive margin (uses_car)
