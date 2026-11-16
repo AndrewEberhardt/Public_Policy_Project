@@ -1,9 +1,10 @@
-| index | Drivers 2024 | Drivers 2025 | Stay | Leave the car |
-|---|---|---|---|---|
-| N | 431.0 | 351.0 | 351.0 | 80.0 |
-| Days/week 2024 | 3.6 | 3.73 | 3.73 | 3.07 |
-| Distance (km) | 10.36 | 11.12 | 11.12 | 7.0 |
-| Poor transit access (%) | 27.15 | 32.76 | 32.76 | 2.5 |
-| Good transit access (%) | 40.84 | 35.04 | 35.04 | 66.25 |
-| FTE income (CHF) | 102891.84 | 104764.48 | 104764.48 | 94675.62 |
-| Children (mean) | 0.89 | 0.97 | 0.97 | 0.54 |
+| Lausanne, characteristics in 2024 | All 2024 drivers | Still drive in 2025 (= 2025 drivers) | Leave the car |
+|---|---|---|---|
+| Employees | 431 | 351 | 80 |
+| Car days/week 2024 | 3.60 | 3.73 | 3.07 |
+| Car days/week 2025 |  | 3.45 |  |
+| Distance (km) | 10.4 | 11.1 | 7.0 |
+| Good transit access (%) | 40.8 | 35.0 | 66.2 |
+| Poor transit access (%) | 27.1 | 32.8 | 2.5 |
+| FTE income (CHF) | 102'892 | 104'764 | 94'676 |
+| Children (mean) | 0.89 | 0.97 | 0.54 |

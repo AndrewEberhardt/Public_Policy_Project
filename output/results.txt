@@ -43,15 +43,24 @@ Sion     Good               47.5      5.4  122
 [C2] (b) + Sion: elasticity -0.114 (se 0.022)
 [C2] (c) + controls: elasticity -0.152 (se 0.021)
 [C2] (d) + interactions: elasticity -0.294 (se 0.031)
+[C2] (d) intensive elasticity, reference (Good access, 0 children, mean income): -0.29 [95% CI -0.36; -0.23]
+[C2] (d) intensive elasticity, medium transit access: -0.23 [95% CI -0.30; -0.17]
+[C2] (d) intensive elasticity, poor transit access: -0.18 [95% CI -0.23; -0.12]
+[C2] (d) intensive elasticity, 1 child: -0.15 [95% CI -0.21; -0.08]
+[C2] (d) intensive elasticity, 2 or more children: -0.15 [95% CI -0.21; -0.09]
+[C] Lausanne drivers: 2024 431, stay 351, leave 80, start driving 0
 [C] selection (2024 characteristics, Lausanne):
-                         Drivers 2024  Drivers 2025       Stay  Leave the car
-N                              431.00        351.00     351.00          80.00
-Days/week 2024                   3.60          3.73       3.73           3.07
-Distance (km)                   10.36         11.12      11.12           7.00
-Poor transit access (%)         27.15         32.76      32.76           2.50
-Good transit access (%)         40.84         35.04      35.04          66.25
-FTE income (CHF)            102891.84     104764.48  104764.48       94675.62
-Children (mean)                  0.89          0.97       0.97           0.54
+                                  All 2024 drivers Still drive in 2025 (= 2025 drivers) Leave the car
+Lausanne, characteristics in 2024                                                                    
+Employees                                      431                                  351            80
+Car days/week 2024                            3.60                                 3.73          3.07
+Car days/week 2025                                                                 3.45              
+Distance (km)                                 10.4                                 11.1           7.0
+Good transit access (%)                       40.8                                 35.0          66.2
+Poor transit access (%)                       27.1                                 32.8           2.5
+FTE income (CHF)                           102'892                              104'764        94'676
+Children (mean)                               0.89                                 0.97          0.54
+[C] drivers in both years, Lausanne (n = 351): 3.73 -> 3.45 days, elasticity -0.11 (all drivers: -0.06); Sion (n = 117): 3.55 -> 3.64 days
 [C] intensive elasticity, drivers in both years, employee + year fixed effects (Lausanne vs Sion): -0.161 (se 0.028), N = 936
 [C] specification (c) dropping E1001-2025 instead of capping: -0.154
 [C3] before-after: ext -0.296 + int -0.062 = -0.358; total -0.358

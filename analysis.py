@@ -427,12 +427,24 @@ note(f"[C] Lausanne: days per driver {d0:.2f} -> {d1:.2f}; intensive elasticity 
 note(f"[C] Sion: days per driver {d0S:.2f} -> {d1S:.2f}")
 
 mC = four_specs("log_days", CU)
-tC2 = reg_table(mC, [("Intensive elasticity (= coef. on log(fee))", lambda m: f"{m.params['log_fee']:.2f}"),
-                     ("Effect of doubling the fee (%)",
+# the coefficient on log(fee) is directly the intensive elasticity (both sides in logs)
+tC2 = reg_table(mC, [("Effect of doubling the fee (%)",
                       lambda m: f"{100 * (2 ** m.params['log_fee'] - 1):.1f}")])
 save(tC2, "table_C2")
 for n, m in mC.items():
     note(f"[C2] {n}: elasticity {m.params['log_fee']:.3f} (se {m.bse['log_fee']:.3f})")
+
+
+def group_elasticity(m, terms):
+    """Intensive elasticity for a group = sum of coefficients (log-log model), with 95% CI."""
+    r = np.array([float(n in terms) for n in m.params.index])
+    t = m.t_test(r)
+    e, se = float(np.ravel(t.effect)[0]), float(np.ravel(t.sd)[0])
+    return f"{e:.2f} [95% CI {e - 1.96 * se:.2f}; {e + 1.96 * se:.2f}]"
+
+
+for lab, terms in GROUP_TERMS:
+    note(f"[C2] (d) intensive elasticity, {lab}: {group_elasticity(mC['(d) + interactions'], terms)}")
 
 # Selection: 2024 vs 2025 drivers in Lausanne, and stayers vs leavers
 w_ls = LS.pivot(index="employee_id", columns="year", values="uses_car")
@@ -442,20 +454,44 @@ leave = w_ls[(w_ls[2024] == 1) & (w_ls[2025] == 0)].index
 enter = w_ls[(w_ls[2024] == 0) & (w_ls[2025] == 1)].index
 
 
-def profile(ix):
+note(f"[C] Lausanne drivers: 2024 {len(stay) + len(leave)}, stay {len(stay)}, leave {len(leave)}, "
+     f"start driving {len(enter)}")
+d25 = LS[LS.year == 2025].set_index("employee_id").car_days_per_week
+
+
+def profile(ix, days25=True):
     g = e24.loc[ix]
-    return pd.Series({"N": len(g), "Days/week 2024": g.car_days_per_week.mean(),
-                      "Distance (km)": g.distance_km.mean(), "Poor transit access (%)": 100 * (g.transit_class == "Poor").mean(),
-                      "Good transit access (%)": 100 * (g.transit_class == "Good").mean(),
-                      "FTE income (CHF)": g.income_fte.mean(), "Children (mean)": g.n_children.mean()})
+    return {"Employees": f"{len(g)}",
+            "Car days/week 2024": f"{g.car_days_per_week.mean():.2f}",
+            "Car days/week 2025": f"{d25.loc[ix].mean():.2f}" if days25 else "",
+            "Distance (km)": f"{g.distance_km.mean():.1f}",
+            "Good transit access (%)": pct((g.transit_class == "Good").mean()),
+            "Poor transit access (%)": pct((g.transit_class == "Poor").mean()),
+            "FTE income (CHF)": chf(g.income_fte.mean()),
+            "Children (mean)": f"{g.n_children.mean():.2f}"}
 
 
 cu24 = LS[(LS.year == 2024) & (LS.uses_car == 1)].employee_id
-cu25 = LS[(LS.year == 2025) & (LS.uses_car == 1)].employee_id
-sel = pd.DataFrame({"Drivers 2024": profile(cu24), "Drivers 2025": profile(cu25),
-                    "Stay": profile(stay), "Leave the car": profile(leave)}).round(2)
+# nobody starts driving in Lausanne, so the 2025 drivers are exactly the stayers
+assert len(enter) == 0 and set(LS[(LS.year == 2025) & (LS.uses_car == 1)].employee_id) == set(stay)
+sel = pd.DataFrame({"All 2024 drivers": profile(cu24.values, days25=False),
+                    "Still drive in 2025 (= 2025 drivers)": profile(stay),
+                    "Leave the car": profile(leave, days25=False)})
+sel.index.name = "Lausanne, characteristics in 2024"
 save(sel, "table_C_selection", index=True)
 note("[C] selection (2024 characteristics, Lausanne):\n" + sel.to_string())
+
+# Same drivers in both years (stayers): before-after elasticity without composition change
+def stayer_elast(site_df):
+    w = site_df.pivot(index="employee_id", columns="year", values="car_days_per_week")
+    w = w[(w[2024] > 0) & (w[2025] > 0)]
+    return w[2024].mean(), w[2025].mean(), np.log(w[2025].mean() / w[2024].mean()) / DLOGFEE, len(w)
+
+
+s0L, s1L, e_stay, n_stay = stayer_elast(LS)
+s0S, s1S, e_stayS, n_stayS = stayer_elast(SI)
+note(f"[C] drivers in both years, Lausanne (n = {n_stay}): {s0L:.2f} -> {s1L:.2f} days, elasticity {e_stay:.2f} "
+     f"(all drivers: {e_int:.2f}); Sion (n = {n_stayS}): {s0S:.2f} -> {s1S:.2f} days")
 
 # Within-person intensive elasticity (drivers in both years), employee fixed effects
 stayers = CU[CU.employee_id.isin(CU.groupby("employee_id").size().loc[lambda s: s == 2].index)]
