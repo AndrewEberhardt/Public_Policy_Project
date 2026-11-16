@@ -724,29 +724,37 @@ e_ext_i = E.transit_class.map(lambda c: eps_cls[c][0]).astype(float)
 e_int_i = E.transit_class.map(lambda c: eps_cls[c][1]).astype(float)
 E["burden_reco_driver"] = np.where(E.uses_car == 1, 100 * RECO_FEE * E.car_days_per_week * ratio ** e_int_i
                                    * WEEKS / E.gross_income_chf, np.nan)
-E["burden_reco_all"] = np.where(E.uses_car == 1, E.burden_reco_driver * ratio ** e_ext_i, 0.0)
+E["p_stay"] = np.where(E.uses_car == 1, ratio ** e_ext_i, 0.0)        # probability of still driving at RECO_FEE
+E["burden_reco_all"] = np.where(E.uses_car == 1, E.burden_reco_driver * E.p_stay, 0.0)
 
 EL = E[E.site == "Lausanne"]
+COL_C_ALL, COL_C_DRV = f"(c) All, CHF {RECO_FEE} (%)", f"(c) Remaining drivers, CHF {RECO_FEE} (%)"
 rows = []
 for t, l, g in [("Overall", "All", EL)] + [(t, lev, EL[EL[v] == lev]) for t, v, lv in GROUPS for lev in lv]:
     dr = g[g.uses_car == 1]
-    rows.append({"Dimension": t, "Group": l, "N employees": len(g), "N drivers 2025": len(dr),
-                 "(a) All employees, 2025 (%)": f"{g.burden.mean():.2f}",
-                 "(b) Drivers 2025 (%)": f"{dr.burden.mean():.2f}",
-                 f"(b) Mean spending of 2025 drivers (CHF/year)": f"{dr.spend.mean():.0f}",
-                 f"(c) All, at CHF {RECO_FEE} (%)": f"{g.burden_reco_all.mean():.2f}",
-                 f"(c) Remaining drivers, at CHF {RECO_FEE} (%)": f"{dr.burden_reco_driver.mean():.2f}",
+    rows.append({"Dimension": t, "Group": l, "Employees": len(g), "Drivers 2025": len(dr),
+                 "(a) All, 2025 (%)": f"{g.burden.mean():.2f}",
+                 "(b) Drivers, 2025 (%)": f"{dr.burden.mean():.2f}",
+                 COL_C_ALL: f"{g.burden_reco_all.mean():.2f}",
+                 # remaining drivers: 2025 drivers weighted by their probability of still driving at RECO_FEE
+                 COL_C_DRV: f"{np.average(dr.burden_reco_driver, weights=dr.p_stay):.2f}",
                  "Share of 2025 revenue (%)": pct(g.spend.sum() / EL.spend.sum())})
+    note(f"[E] {l}: {pct(len(g) / len(EL))} % of employees, {pct(g.spend.sum() / EL.spend.sum())} % of 2025 "
+         f"revenue; mean spending of 2025 drivers {chf(dr.spend.mean())} CHF/year; expected drivers at CHF "
+         f"{RECO_FEE}: {dr.p_stay.sum():.0f} (2025: {len(dr)})")
 ES = E[E.site == "Sion"]
 drS = ES[ES.uses_car == 1]
-rows.append({"Dimension": "Reference", "Group": "Sion (CHF 2)", "N employees": len(ES),
-             "N drivers 2025": len(drS), "(a) All employees, 2025 (%)": f"{ES.burden.mean():.2f}",
-             "(b) Drivers 2025 (%)": f"{drS.burden.mean():.2f}",
-             "(b) Mean spending of 2025 drivers (CHF/year)": f"{drS.spend.mean():.0f}",
-             f"(c) All, at CHF {RECO_FEE} (%)": "", f"(c) Remaining drivers, at CHF {RECO_FEE} (%)": "",
-             "Share of 2025 revenue (%)": ""})
+rows.append({"Dimension": "Reference", "Group": "Sion (CHF 2)", "Employees": len(ES), "Drivers 2025": len(drS),
+             "(a) All, 2025 (%)": f"{ES.burden.mean():.2f}", "(b) Drivers, 2025 (%)": f"{drS.burden.mean():.2f}",
+             COL_C_ALL: "", COL_C_DRV: "", "Share of 2025 revenue (%)": ""})
+note(f"[E] Sion: mean spending of 2025 drivers {chf(drS.spend.mean())} CHF/year")
 tE1 = pd.DataFrame(rows)
 save(tE1, "table_E1")
+drL = EL[EL.uses_car == 1]
+spend_reco = RECO_FEE * drL.car_days_per_week * ratio ** e_int_i[drL.index] * WEEKS
+note(f"[E] at CHF {RECO_FEE}: mean spending of remaining drivers {chf(np.average(spend_reco, weights=drL.p_stay))} "
+     f"CHF/year; maximum individual burden {drL.burden_reco_driver.max():.2f} %; expected share of remaining "
+     f"drivers above 1 %: {pct(np.average(drL.burden_reco_driver > 1, weights=drL.p_stay))} %")
 note(f"[E] maximum individual burden 2025 (Lausanne): {EL.burden.max():.2f} %; "
      f"share of drivers above 1 %: {pct((EL[EL.uses_car == 1].burden > 1).mean())} %")
 

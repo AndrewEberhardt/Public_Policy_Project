@@ -88,4 +88,16 @@ Children (mean)                               0.89                              
 [D] total elasticity (net of Sion) -0.47: revenue rises by 53 % of each % increase in the fee (constant elasticity, no revenue maximum)
 [D] observed 2024 revenue, Lausanne: 142'904 CHF
 [E] elasticities (ext, int) by transit class used for the projection: {'Good': (np.float64(-0.517), np.float64(-0.125)), 'Medium': (np.float64(-0.288), np.float64(-0.059)), 'Poor': (np.float64(-0.025), np.float64(-0.052))}
+[E] All: 100.0 % of employees, 100.0 % of 2025 revenue; mean spending of 2025 drivers 635 CHF/year; expected drivers at CHF 6: 314 (2025: 351)
+[E] Good: 53.2 % of employees, 30.8 % of 2025 revenue; mean spending of 2025 drivers 558 CHF/year; expected drivers at CHF 6: 100 (2025: 123)
+[E] Medium: 30.0 % of employees, 32.7 % of 2025 revenue; mean spending of 2025 drivers 646 CHF/year; expected drivers at CHF 6: 101 (2025: 113)
+[E] Poor: 16.8 % of employees, 36.5 % of 2025 revenue; mean spending of 2025 drivers 708 CHF/year; expected drivers at CHF 6: 114 (2025: 115)
+[E] T1 (low): 32.6 % of employees, 26.0 % of 2025 revenue; mean spending of 2025 drivers 617 CHF/year; expected drivers at CHF 6: 85 (2025: 94)
+[E] T2 (middle): 32.5 % of employees, 31.3 % of 2025 revenue; mean spending of 2025 drivers 641 CHF/year; expected drivers at CHF 6: 98 (2025: 109)
+[E] T3 (high): 34.9 % of employees, 42.6 % of 2025 revenue; mean spending of 2025 drivers 643 CHF/year; expected drivers at CHF 6: 132 (2025: 148)
+[E] 0 children: 52.6 % of employees, 34.5 % of 2025 revenue; mean spending of 2025 drivers 538 CHF/year; expected drivers at CHF 6: 129 (2025: 143)
+[E] 1 child: 19.4 % of employees, 22.1 % of 2025 revenue; mean spending of 2025 drivers 640 CHF/year; expected drivers at CHF 6: 69 (2025: 77)
+[E] 2 or more children: 28.0 % of employees, 43.4 % of 2025 revenue; mean spending of 2025 drivers 738 CHF/year; expected drivers at CHF 6: 116 (2025: 131)
+[E] Sion: mean spending of 2025 drivers 336 CHF/year
+[E] at CHF 6: mean spending of remaining drivers 932 CHF/year; maximum individual burden 2.69 %; expected share of remaining drivers above 1 %: 44.1 %
 [E] maximum individual burden 2025 (Lausanne): 1.86 %; share of drivers above 1 %: 12.8 %
