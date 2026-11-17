@@ -244,7 +244,7 @@ rows = []
 for site, g in df.groupby("site"):
     for y, gy in g.groupby("year"):
         sh = gy.main_mode.value_counts(normalize=True)
-        rows.append({"Site": site, "Year": y, "Fee (CHF/day)": gy.parking_fee_chf.iloc[0], "N": len(gy),
+        rows.append({"Site": site, "Year": y, "Fee (CHF/day)": f"{gy.parking_fee_chf.iloc[0]:g}", "N": len(gy),
                      "Car (%)": pct(sh.get("car", 0)), "Bus (%)": pct(sh.get("bus", 0)),
                      "Bike (%)": pct(sh.get("bike", 0))})
 tB1 = pd.DataFrame(rows)
