@@ -66,6 +66,7 @@ Children (mean)                               0.89                              
 [C3] before-after: ext -0.296 + int -0.062 = -0.358; total -0.358
 [C3] net of Sion: ext -0.368 + int -0.102 = -0.471; total -0.471
 [C3] share of the extensive margin in the total (net of Sion): 78 %
+[D] observed 2025 revenue, Sion (CHF 2): 41'280 CHF; employer total at CHF 4 in Lausanne: 264'270 CHF
 [D] central elasticities (net of Sion): extensive -0.368, intensive -0.102
 [D] central scenario:
    fee       S       D       T          rev

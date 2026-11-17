@@ -682,7 +682,21 @@ tD1 = pd.DataFrame({
     "Car days per employee": central["T"].map(lambda v: f"{v:.2f}"),
     "Annual revenue (thousand CHF)": central.rev.map(lambda v: f"{v / 1000:.0f}"),
 })
-save(tD1, "table_D1")
+# Sion is not projected (no fee change, no estimated response): its 2025 revenue at CHF 2 is added for the employer total
+rev_sion_2025 = SI[SI.year == 2025].car_days_per_week.sum() * WEEKS * FEE_2024
+note(f"[D] observed 2025 revenue, Sion (CHF 2): {chf(rev_sion_2025)} CHF; employer total at CHF 4 in Lausanne: "
+     f"{chf(rev_2025_obs + rev_sion_2025)} CHF")
+save(tD1, "table_D1", table_note=(
+    f"Note: Lausanne site only (N = {N_LAU} employees). Central scenario: net-of-Sion elasticities from Table C3 "
+    f"(extensive {e_did[0]:.2f}, intensive {e_did[1]:.2f}), assumed constant and applied to the situation observed "
+    "in 2025 at CHF 4: car share S(p) = S(4) x (p / 4)^extensive elasticity, days per driver D(p) = D(4) x "
+    "(p / 4)^intensive elasticity, car days per employee (per week) T = S x D. Annual revenue = fee x T x "
+    f"{WEEKS} weeks x {N_LAU} employees, in thousand CHF; at CHF 4 it equals the revenue observed in 2025. 95% CI: "
+    "the bounds of the bootstrap confidence intervals of the two elasticities, combined. Above CHF 8 (a second "
+    "doubling of the fee), the forecast extrapolates beyond the observed variation. Sion is not projected: its fee "
+    "is assumed to stay at CHF 2, and its observed 2025 revenue "
+    f"(CHF {chf(rev_sion_2025)}, {int((SI[SI.year == 2025].uses_car == 1).sum())} drivers out of "
+    f"{SI.employee_id.nunique()}) must be added to obtain the employer's total revenue."))
 note(f"[D] central elasticities (net of Sion): extensive {e_did[0]:.3f}, intensive {e_did[1]:.3f}")
 note("[D] central scenario:\n" + central.round(4).to_string())
 sens = pd.DataFrame({"fee": SCENARIOS,
