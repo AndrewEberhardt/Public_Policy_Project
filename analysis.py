@@ -52,11 +52,17 @@ def note(*args):
     print(line)
 
 
-def save(df, name, index=False):
+TABLE_NOTES = {}   # notes printed under tables (also written to the .md files)
+
+
+def save(df, name, index=False, table_note=None):
     df.to_csv(TAB / f"{name}.csv", index=index)
     d = df.reset_index() if index else df
     lines = ["| " + " | ".join(map(str, d.columns)) + " |", "|" + "---|" * d.shape[1]]
     lines += ["| " + " | ".join(map(str, r)) + " |" for r in d.itertuples(index=False)]
+    if table_note:
+        TABLE_NOTES[name] = table_note
+        lines += ["", table_note]
     (TAB / f"{name}.md").write_text("\n".join(lines) + "\n")
 
 
@@ -301,7 +307,17 @@ for t, l, (a, b, d_, e) in by_group(LS, ext_stats):
 tB2 = pd.DataFrame(rows)
 tB2.insert(2, "N employees", [len(g) // 2 for _, _, g in
                              [("", "", LS)] + [(0, 0, LS[LS[v] == lev]) for _, v, lv in GROUPS for lev in lv]])
-save(tB2, "table_B2")
+save(tB2, "table_B2", table_note=(
+    f"Note: Sample: Lausanne employees only (N = {LS.employee_id.nunique()}), the only site where the fee changed "
+    "(CHF 2 to CHF 4); Sion's fee is unchanged, so no elasticity can be computed there, and the common 2024-2025 "
+    "trend is handled with Sion as comparison site in Table B3. Balanced panel: the same employees are observed in "
+    "both years and group membership is fixed. Descriptive before-after estimates, not model-implied effects (see "
+    "Table B3, column d). Car share = share of employees whose main mode is car (uses_car = 1), in %. Change (pp) = "
+    "2025 share minus 2024 share, in percentage points. Extensive elasticity = ln(share 2025 / share 2024) / ln(4 / 2). "
+    "Groups: transit access = terciles of the Part A score computed within each site (Good, Medium, Poor); income "
+    f"tercile = terciles of gross income / FTE over all 1'000 employees (cut-offs CHF {chf(cuts.iloc[0])} and "
+    f"CHF {chf(cuts.iloc[1])}), hence unequal group sizes in Lausanne; children = children under 16 in the "
+    "household (2 = 2 or more). N employees = number of employees in the group (each observed twice)."))
 
 
 # --- B3: linear probability model
@@ -420,7 +436,19 @@ for t, l, (d0, d1, e, n0, n1) in by_group(LS, int_stats):
     rows.append({"Dimension": t, "Group": l, "Days/week 2024": f"{d0:.2f}", "Days/week 2025": f"{d1:.2f}",
                  "Intensive elasticity": f"{e:.2f}", "N drivers 2024": n0, "N drivers 2025": n1})
 tC1 = pd.DataFrame(rows)
-save(tC1, "table_C1")
+nd0, nd1 = int((LS[LS.year == 2024].uses_car == 1).sum()), int((LS[LS.year == 2025].uses_car == 1).sum())
+save(tC1, "table_C1", table_note=(
+    f"Note: Sample: Lausanne car users only (uses_car = 1, i.e. car_days_per_week > 0): {nd0} in 2024 and {nd1} in "
+    "2025, the only site where the fee changed (CHF 2 to CHF 4); Sion's fee is unchanged, so no elasticity can be "
+    "computed there, and the common 2024-2025 trend is handled with Sion as comparison site in Table C2. The two "
+    "years compare different sets of drivers: 2025 drivers are the 2024 drivers who kept driving (no Lausanne "
+    "employee switched to car), so the change mixes the response of stayers with the selection of who stays "
+    "(discussed with Table C2). Descriptive before-after estimates, not model-implied effects (see Table C2, column d). "
+    "Days/week = mean car_days_per_week among car users (one 2025 value of 7.4 capped at 5). Intensive elasticity = "
+    "ln(mean days 2025 / mean days 2024) / ln(4 / 2). Groups as in Table B2: transit access = terciles of the Part A "
+    "score computed within each site; income tercile = terciles of gross income / FTE over all 1'000 employees "
+    f"(cut-offs CHF {chf(cuts.iloc[0])} and CHF {chf(cuts.iloc[1])}); children = children under 16 in the household "
+    "(2 = 2 or more). N drivers = number of car users in the group in each year."))
 d0, d1, e_int, _, _ = int_stats(LS)
 d0S, d1S, _, _, _ = int_stats(SI)
 note(f"[C] Lausanne: days per driver {d0:.2f} -> {d1:.2f}; intensive elasticity {e_int:.2f}")
