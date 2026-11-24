@@ -699,7 +699,11 @@ save(tD1, "table_D1", table_note=(
     "the bounds of the bootstrap confidence intervals of the two elasticities, combined. Above CHF 8 (a second "
     "doubling of the fee), the forecast extrapolates beyond the observed variation."))
 note(f"[D] central elasticities (net of Sion): extensive {e_did[0]:.3f}, intensive {e_did[1]:.3f}")
-note("[D] central scenario:\n" + central.round(4).to_string())
+note("[D] central scenario:\n" + pd.DataFrame({
+    "Fee (CHF)": central.fee, "Car share S (%)": central.S.map(pct),
+    "Days per driver D": central.D.map(lambda v: f"{v:.2f}"),
+    "Car days per employee T": central["T"].map(lambda v: f"{v:.2f}"),
+    "Revenue (CHF)": central.rev.map(chf)}).to_string(index=False))
 sens = pd.DataFrame({"fee": SCENARIOS,
                      "central S (%)": central.S.map(pct), "CI bounds S (%)": [f"{pct(l)} to {pct(h)}" for l, h in
                                                                              zip(alt_lo.S, alt_hi.S)],
@@ -772,8 +776,8 @@ E["burden"] = 100 * E.spend / E.gross_income_chf
 # each 2025 driver still drives with probability (p/4)^eps_ext and scales days by (p/4)^eps_int
 ratio = RECO_FEE / FEE_2025
 # eps_cls: elasticities by transit class, defined in Part D
-note("[E] elasticities (ext, int) by transit class used for the projection:",
-     {c: (round(a, 3), round(b, 3)) for c, (a, b) in eps_cls.items()})
+note("[E] elasticities by transit class used for the projection: "
+     + "; ".join(f"{c} extensive {a:.3f}, intensive {b:.3f}" for c, (a, b) in eps_cls.items()))
 e_ext_i = E.transit_class.map(lambda c: eps_cls[c][0]).astype(float)
 e_int_i = E.transit_class.map(lambda c: eps_cls[c][1]).astype(float)
 E["burden_reco_driver"] = np.where(E.uses_car == 1, 100 * RECO_FEE * E.car_days_per_week * ratio ** e_int_i

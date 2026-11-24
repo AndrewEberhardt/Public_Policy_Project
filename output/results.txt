@@ -68,12 +68,12 @@ Children (mean)                               0.89                              
 [C3] share of the extensive margin in the total (net of Sion): 78 %
 [D] central elasticities (net of Sion): extensive -0.368, intensive -0.102
 [D] central scenario:
-   fee       S       D       T          rev
-0    4  0.4388  3.4527  1.5149  222989.6000
-1    5  0.4041  3.3748  1.3638  250944.9889
-2    6  0.3779  3.3124  1.2517  276368.6081
-3    8  0.3399  3.2163  1.0932  321823.7378
-4   10  0.3131  3.1437  0.9842  362169.6002
+ Fee (CHF) Car share S (%) Days per driver D Car days per employee T Revenue (CHF)
+         4            43.9              3.45                    1.51       222'990
+         5            40.4              3.37                    1.36       250'945
+         6            37.8              3.31                    1.25       276'369
+         8            34.0              3.22                    1.09       321'824
+        10            31.3              3.14                    0.98       362'170
 [D] sensitivity (car share S and revenue):
  fee central S (%) CI bounds S (%) before-after S (%) by transit class S (%) linear LPM (c) S (%)  central rev (kCHF) CI bounds rev (kCHF)  before-after rev (kCHF)  by transit class rev (kCHF) Poor access among drivers, by class (%)
    4          43.9    43.9 to 43.9               43.9                   43.9                 43.9                 223           223 to 223                      223                          223                                    32.8
@@ -87,7 +87,7 @@ Children (mean)                               0.89                              
 [D] central, CHF 10: 250 drivers (2025: 351), car share -12.6 pp, car days per employee -35.0 %, revenue +62.4 %
 [D] total elasticity (net of Sion) -0.47: revenue rises by 53 % of each % increase in the fee (constant elasticity, no revenue maximum)
 [D] observed 2024 revenue, Lausanne: 142'904 CHF
-[E] elasticities (ext, int) by transit class used for the projection: {'Good': (np.float64(-0.517), np.float64(-0.125)), 'Medium': (np.float64(-0.288), np.float64(-0.059)), 'Poor': (np.float64(-0.025), np.float64(-0.052))}
+[E] elasticities by transit class used for the projection: Good extensive -0.517, intensive -0.125; Medium extensive -0.288, intensive -0.059; Poor extensive -0.025, intensive -0.052
 [E] All: 100.0 % of employees, 100.0 % of 2025 revenue; mean spending of 2025 drivers 635 CHF/year; expected drivers at CHF 6: 314 (2025: 351)
 [E] Good: 53.2 % of employees, 30.8 % of 2025 revenue; mean spending of 2025 drivers 558 CHF/year; expected drivers at CHF 6: 100 (2025: 123)
 [E] Medium: 30.0 % of employees, 32.7 % of 2025 revenue; mean spending of 2025 drivers 646 CHF/year; expected drivers at CHF 6: 101 (2025: 113)
