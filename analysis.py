@@ -602,7 +602,14 @@ for lab, i in [("Extensive: share of drivers S", 0), ("Intensive: days per drive
         "Elasticity, net of Sion": f"{e_did[i]:.2f} [{ci_did[0, i]:.2f}; {ci_did[1, i]:.2f}]",
     })
 tC3 = pd.DataFrame(rowsC3)
-save(tC3, "table_C3")
+save(tC3, "table_C3", table_note=(
+    "Note: S = share of car users among all employees of the site; D = mean car_days_per_week among car users; "
+    "T = mean car days per week among all employees (0 for non-users), T = S x D. Same employees and years for the "
+    "three margins (balanced panel, one 2025 value of 7.4 capped at 5). Elasticity = change in ln(.) divided by "
+    "ln(4 / 2), so that extensive + intensive = total exactly. Elasticity, net of Sion = Lausanne elasticity net of "
+    "the trend observed in Sion: Sion's fee did not change, so no elasticity can be computed there, and Sion serves "
+    "only as comparison site (its 2024-2025 change in ln(.) is subtracted from Lausanne's). 95% confidence "
+    f"intervals in brackets: bootstrap by employee, {N_BOOT} draws, drawn separately within each site."))
 note(f"[C3] before-after: ext {e_raw[0]:.3f} + int {e_raw[1]:.3f} = {e_raw[0] + e_raw[1]:.3f}; total {e_raw[2]:.3f}")
 note(f"[C3] net of Sion: ext {e_did[0]:.3f} + int {e_did[1]:.3f} = {e_did[0] + e_did[1]:.3f}; total {e_did[2]:.3f}")
 note(f"[C3] share of the extensive margin in the total (net of Sion): {100 * e_did[0] / e_did[2]:.0f} %")
