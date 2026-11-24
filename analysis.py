@@ -156,6 +156,8 @@ assert np.allclose(score.round(1), ta.transit_score, atol=0.051), "recomputed sc
 # classes: score terciles computed separately for each site (Lausanne municipalities among themselves, Sion likewise)
 cls = score.groupby(ta.site).transform(lambda x: pd.qcut(x, 3, labels=["Poor", "Medium", "Good"]).astype(str))
 assert (cls == ta.transit_class).all()
+for site, s in score.groupby(ta.site):
+    note(f"[A] transit score tercile cut-offs, {site}: {s.quantile(1 / 3):.1f} and {s.quantile(2 / 3):.1f}")
 
 ta["commune_key"] = commune_key(ta.home_commune)
 assert set(df.commune_key) == set(ta.commune_key), "municipalities without an index"

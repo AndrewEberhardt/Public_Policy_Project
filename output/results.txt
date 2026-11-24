@@ -5,6 +5,8 @@
 [Cleaning] car_days_per_week > 5: [['E1001', 2025, 7.4]] -> capped at 5
 [Cleaning] age identical in 2024 and 2025 for every employee (age measured once)
 [Groups] full-time-equivalent income tercile cut-offs: 80'800 and 105'700 CHF
+[A] transit score tercile cut-offs, Lausanne: 50.8 and 74.3
+[A] transit score tercile cut-offs, Sion: 21.3 and 39.1
 [A] correlation OSRM distance vs mean reported distance by municipality: 0.97
 [A] correlation transit score vs mean reported distance: -0.66
 [A] employees by class and site:
