@@ -723,6 +723,30 @@ note(f"[D] total elasticity (net of Sion) {e_did[2]:.2f}: revenue rises by {100 
      f"increase in the fee (constant elasticity, no revenue maximum)")
 note(f"[D] observed 2024 revenue, Lausanne: {chf(LS[LS.year == 2024].car_days_per_week.sum() * WEEKS * FEE_2024)} CHF")
 
+# Comparison of the fees (central scenario): marginal effect of each franc, cars parked on an average day, spread
+# between the forecast variants
+WORKDAYS = 5   # working days per week: cars parked on an average day = car days per employee x employees / 5
+drv = central.S * N_LAU
+for k in range(1, len(SCENARIOS)):
+    note(f"[D] CHF {SCENARIOS[k - 1]} -> {SCENARIOS[k]}: {(drv.iloc[k - 1] - drv.iloc[k]) / (SCENARIOS[k] - SCENARIOS[k - 1]):.1f}"
+         f" fewer drivers per extra CHF")
+note("[D] cars parked on an average day (central): "
+     + "; ".join(f"CHF {p}: {t * N_LAU / WORKDAYS:.0f}" for p, t in zip(SCENARIOS, central["T"])))
+variants_S = pd.DataFrame({"central": central.S, "CI strong": alt_lo.S, "CI weak": alt_hi.S,
+                           "before-after": alt_raw.S, "by class": by_class.S, "linear": lpm.S})
+spread = 100 * (variants_S.max(axis=1) - variants_S.min(axis=1))
+note("[D] spread of the car share between the six forecast variants (max - min): "
+     + "; ".join(f"CHF {p}: {s:.1f} pp" for p, s in zip(SCENARIOS, spread)))
+
+# Sion revenue (fee kept at CHF 2, 2025 behaviour) and total revenue of the employer (Lausanne central + Sion)
+SI25 = SI[SI.year == 2025]
+rev_sion = SI25.car_days_per_week.sum() * WEEKS * SI25.parking_fee_chf.iloc[0]
+assert (SI25.parking_fee_chf == SI25.parking_fee_chf.iloc[0]).all()
+note(f"[D] Sion revenue 2025 (CHF {SI25.parking_fee_chf.iloc[0]:g}, {SI25.uses_car.sum()} drivers of {len(SI25)}): "
+     f"{chf(rev_sion)} CHF; assumed unchanged in 2026")
+note("[D] total employer revenue (Lausanne central + Sion at CHF 2): "
+     + "; ".join(f"Lausanne CHF {p}: {chf(r + rev_sion)} CHF" for p, r in zip(SCENARIOS, central.rev)))
+
 # --- Figure D1: two panels (no dual axis)
 BLUE, ORANGE, INK, MUTED = "#2a78d6", "#eb6834", "#1f1f1e", "#6b6a64"
 plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
@@ -814,6 +838,33 @@ note(f"[E] at CHF {RECO_FEE}: mean spending of remaining drivers {chf(np.average
      f"drivers above 1 %: {pct(np.average(drL.burden_reco_driver > 1, weights=drL.p_stay))} %")
 note(f"[E] maximum individual burden 2025 (Lausanne): {EL.burden.max():.2f} %; "
      f"share of drivers above 1 %: {pct((EL[EL.uses_car == 1].burden > 1).mean())} %")
+
+
+# Burden at each scenario fee (comparison of the options, Part F): same projection as column (c) of Table E1
+def project(p):
+    """Lausanne 2025 drivers at fee p: probability of still driving, spending and burden if still driving."""
+    r = p / FEE_2025
+    out = drL[["transit_class", "income_tercile", "gross_income_chf"]].copy()
+    out["p_stay"] = r ** e_ext_i[drL.index]
+    out["spend"] = p * drL.car_days_per_week * r ** e_int_i[drL.index] * WEEKS
+    out["burden"] = 100 * out.spend / out.gross_income_chf
+    return out
+
+
+assert np.allclose(project(RECO_FEE).burden, drL.burden_reco_driver)
+for p in SCENARIOS:
+    pr = project(p)
+    w = pr.p_stay
+    wavg = lambda x, m=slice(None): np.average(x[m], weights=w[m])
+    poor, t1 = pr.transit_class == "Poor", pr.income_tercile == "T1 (low)"
+    note(f"[E] CHF {p}, remaining drivers (by-class projection): expected {w.sum():.0f}; mean spending "
+         f"{chf(wavg(pr.spend))} CHF/year; above 1 % of income {pct(wavg(pr.burden > 1))} %, above 2 % "
+         f"{pct(wavg(pr.burden > 2))} %; maximum {pr.burden.max():.2f} %; mean burden Poor access "
+         f"{wavg(pr.burden, poor):.2f} %, low income T1 {wavg(pr.burden, t1):.2f} %")
+    tot = (w * pr.spend).sum()
+    note(f"[E] CHF {p}, by transit access: " + "; ".join(
+        f"{c} {w[pr.transit_class == c].sum():.0f} drivers (2025: {(pr.transit_class == c).sum()}), "
+        f"{pct((w * pr.spend)[pr.transit_class == c].sum() / tot)} % of revenue" for c in ORDER_T))
 
 (OUT / "results.txt").write_text("\n".join(LOG) + "\n")
 print(f"\nTables written to {TAB}, figure to {FIG}")

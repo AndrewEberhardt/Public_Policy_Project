@@ -87,6 +87,14 @@ Children (mean)                               0.89                              
 [D] central, CHF 10: 250 drivers (2025: 351), car share -12.6 pp, car days per employee -35.0 %, revenue +62.4 %
 [D] total elasticity (net of Sion) -0.47: revenue rises by 53 % of each % increase in the fee (constant elasticity, no revenue maximum)
 [D] observed 2024 revenue, Lausanne: 142'904 CHF
+[D] CHF 4 -> 5: 27.7 fewer drivers per extra CHF
+[D] CHF 5 -> 6: 21.0 fewer drivers per extra CHF
+[D] CHF 6 -> 8: 15.2 fewer drivers per extra CHF
+[D] CHF 8 -> 10: 10.7 fewer drivers per extra CHF
+[D] cars parked on an average day (central): CHF 4: 242; CHF 5: 218; CHF 6: 200; CHF 8: 175; CHF 10: 157
+[D] spread of the car share between the six forecast variants (max - min): CHF 4: 0.0 pp; CHF 5: 1.6 pp; CHF 6: 3.0 pp; CHF 8: 5.6 pp; CHF 10: 7.8 pp
+[D] Sion revenue 2025 (CHF 2, 123 drivers of 200): 41'280 CHF; assumed unchanged in 2026
+[D] total employer revenue (Lausanne central + Sion at CHF 2): Lausanne CHF 4: 264'270 CHF; Lausanne CHF 5: 292'225 CHF; Lausanne CHF 6: 317'649 CHF; Lausanne CHF 8: 363'104 CHF; Lausanne CHF 10: 403'450 CHF
 [E] elasticities by transit class used for the projection: Good extensive -0.517, intensive -0.125; Medium extensive -0.288, intensive -0.059; Poor extensive -0.025, intensive -0.052
 [E] All: 100.0 % of employees, 100.0 % of 2025 revenue; mean spending of 2025 drivers 635 CHF/year; expected drivers at CHF 6: 314 (2025: 351)
 [E] Good: 53.2 % of employees, 30.8 % of 2025 revenue; mean spending of 2025 drivers 558 CHF/year; expected drivers at CHF 6: 100 (2025: 123)
@@ -100,3 +108,13 @@ Children (mean)                               0.89                              
 [E] 2 or more children: 28.0 % of employees, 43.4 % of 2025 revenue; mean spending of 2025 drivers 738 CHF/year; expected drivers at CHF 6: 116 (2025: 131)
 [E] at CHF 6: mean spending of remaining drivers 932 CHF/year; maximum individual burden 2.69 %; expected share of remaining drivers above 1 %: 44.1 %
 [E] maximum individual burden 2025 (Lausanne): 1.86 %; share of drivers above 1 %: 12.8 %
+[E] CHF 4, remaining drivers (by-class projection): expected 351; mean spending 635 CHF/year; above 1 % of income 12.8 %, above 2 % 0.0 %; maximum 1.86 %; mean burden Poor access 0.80 %, low income T1 0.97 %
+[E] CHF 4, by transit access: Good 123 drivers (2025: 123), 30.8 % of revenue; Medium 113 drivers (2025: 113), 32.7 % of revenue; Poor 115 drivers (2025: 115), 36.5 % of revenue
+[E] CHF 5, remaining drivers (by-class projection): expected 330; mean spending 784 CHF/year; above 1 % of income 27.1 %, above 2 % 2.0 %; maximum 2.26 %; mean burden Poor access 0.99 %, low income T1 1.20 %
+[E] CHF 5, by transit access: Good 110 drivers (2025: 123), 28.7 % of revenue; Medium 106 drivers (2025: 113), 32.6 % of revenue; Poor 114 drivers (2025: 115), 38.7 % of revenue
+[E] CHF 6, remaining drivers (by-class projection): expected 314; mean spending 932 CHF/year; above 1 % of income 44.1 %, above 2 % 3.3 %; maximum 2.69 %; mean burden Poor access 1.18 %, low income T1 1.43 %
+[E] CHF 6, by transit access: Good 100 drivers (2025: 123), 27.1 % of revenue; Medium 101 drivers (2025: 113), 32.5 % of revenue; Poor 114 drivers (2025: 115), 40.4 % of revenue
+[E] CHF 8, remaining drivers (by-class projection): expected 292; mean spending 1'224 CHF/year; above 1 % of income 69.0 %, above 2 % 11.1 %; maximum 3.53 %; mean burden Poor access 1.55 %, low income T1 1.89 %
+[E] CHF 8, by transit access: Good 86 drivers (2025: 123), 24.6 % of revenue; Medium 93 drivers (2025: 113), 32.1 % of revenue; Poor 113 drivers (2025: 115), 43.2 % of revenue
+[E] CHF 10, remaining drivers (by-class projection): expected 276; mean spending 1'514 CHF/year; above 1 % of income 86.7 %, above 2 % 25.7 %; maximum 4.36 %; mean burden Poor access 1.91 %, low income T1 2.34 %
+[E] CHF 10, by transit access: Good 77 drivers (2025: 123), 22.8 % of revenue; Medium 87 drivers (2025: 113), 31.8 % of revenue; Poor 112 drivers (2025: 115), 45.4 % of revenue
