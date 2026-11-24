@@ -10,4 +10,5 @@
 | Children < 16 | 0 children | 421 | 143 | 0.19 | 0.56 | 0.25 | 0.82 | 34.5 |
 | Children < 16 | 1 child | 155 | 77 | 0.35 | 0.71 | 0.47 | 1.05 | 22.1 |
 | Children < 16 | 2 or more children | 224 | 131 | 0.48 | 0.83 | 0.63 | 1.21 | 43.4 |
-| Reference | Sion (CHF 2) | 200 | 123 | 0.25 | 0.41 |  |  |  |
+
+Note: Lausanne site only (N = 800 employees, 2025). Annual parking spending = fee x car days per week x 46 weeks, as % of observed gross income (at the observed FTE). (a) mean over all employees (0 for non-drivers); (b) mean over 2025 drivers; (c) projection at CHF 6 with elasticities specific to each transit access class (Tables B2 and C1); remaining drivers weighted by their probability of still driving. No welfare effect and no unobserved transit cost is inferred.

@@ -682,10 +682,7 @@ tD1 = pd.DataFrame({
     "Car days per employee": central["T"].map(lambda v: f"{v:.2f}"),
     "Annual revenue (thousand CHF)": central.rev.map(lambda v: f"{v / 1000:.0f}"),
 })
-# Sion is not projected (no fee change, no estimated response): its 2025 revenue at CHF 2 is added for the employer total
-rev_sion_2025 = SI[SI.year == 2025].car_days_per_week.sum() * WEEKS * FEE_2024
-note(f"[D] observed 2025 revenue, Sion (CHF 2): {chf(rev_sion_2025)} CHF; employer total at CHF 4 in Lausanne: "
-     f"{chf(rev_2025_obs + rev_sion_2025)} CHF")
+# Policy scope: Lausanne only (Sion serves only as comparison site for the elasticities, Parts B and C)
 save(tD1, "table_D1", table_note=(
     f"Note: Lausanne site only (N = {N_LAU} employees). Central scenario: net-of-Sion elasticities from Table C3 "
     f"(extensive {e_did[0]:.2f}, intensive {e_did[1]:.2f}), assumed constant and applied to the situation observed "
@@ -693,10 +690,7 @@ save(tD1, "table_D1", table_note=(
     "(p / 4)^intensive elasticity, car days per employee (per week) T = S x D. Annual revenue = fee x T x "
     f"{WEEKS} weeks x {N_LAU} employees, in thousand CHF; at CHF 4 it equals the revenue observed in 2025. 95% CI: "
     "the bounds of the bootstrap confidence intervals of the two elasticities, combined. Above CHF 8 (a second "
-    "doubling of the fee), the forecast extrapolates beyond the observed variation. Sion is not projected: its fee "
-    "is assumed to stay at CHF 2, and its observed 2025 revenue "
-    f"(CHF {chf(rev_sion_2025)}, {int((SI[SI.year == 2025].uses_car == 1).sum())} drivers out of "
-    f"{SI.employee_id.nunique()}) must be added to obtain the employer's total revenue."))
+    "doubling of the fee), the forecast extrapolates beyond the observed variation."))
 note(f"[D] central elasticities (net of Sion): extensive {e_did[0]:.3f}, intensive {e_did[1]:.3f}")
 note("[D] central scenario:\n" + central.round(4).to_string())
 sens = pd.DataFrame({"fee": SCENARIOS,
@@ -795,14 +789,13 @@ for t, l, g in [("Overall", "All", EL)] + [(t, lev, EL[EL[v] == lev]) for t, v, 
     note(f"[E] {l}: {pct(len(g) / len(EL))} % of employees, {pct(g.spend.sum() / EL.spend.sum())} % of 2025 "
          f"revenue; mean spending of 2025 drivers {chf(dr.spend.mean())} CHF/year; expected drivers at CHF "
          f"{RECO_FEE}: {dr.p_stay.sum():.0f} (2025: {len(dr)})")
-ES = E[E.site == "Sion"]
-drS = ES[ES.uses_car == 1]
-rows.append({"Dimension": "Reference", "Group": "Sion (CHF 2)", "Employees": len(ES), "Drivers 2025": len(drS),
-             "(a) All, 2025 (%)": f"{ES.burden.mean():.2f}", "(b) Drivers, 2025 (%)": f"{drS.burden.mean():.2f}",
-             COL_C_ALL: "", COL_C_DRV: "", "Share of 2025 revenue (%)": ""})
-note(f"[E] Sion: mean spending of 2025 drivers {chf(drS.spend.mean())} CHF/year")
 tE1 = pd.DataFrame(rows)
-save(tE1, "table_E1")
+save(tE1, "table_E1", table_note=(
+    f"Note: Lausanne site only (N = {len(EL)} employees, 2025). Annual parking spending = fee x car days per week x "
+    f"{WEEKS} weeks, as % of observed gross income (at the observed FTE). (a) mean over all employees (0 for "
+    f"non-drivers); (b) mean over 2025 drivers; (c) projection at CHF {RECO_FEE} with elasticities specific to each "
+    "transit access class (Tables B2 and C1); remaining drivers weighted by their probability of still driving. "
+    "No welfare effect and no unobserved transit cost is inferred."))
 drL = EL[EL.uses_car == 1]
 spend_reco = RECO_FEE * drL.car_days_per_week * ratio ** e_int_i[drL.index] * WEEKS
 note(f"[E] at CHF {RECO_FEE}: mean spending of remaining drivers {chf(np.average(spend_reco, weights=drL.p_stay))} "

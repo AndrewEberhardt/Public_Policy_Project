@@ -66,7 +66,6 @@ Children (mean)                               0.89                              
 [C3] before-after: ext -0.296 + int -0.062 = -0.358; total -0.358
 [C3] net of Sion: ext -0.368 + int -0.102 = -0.471; total -0.471
 [C3] share of the extensive margin in the total (net of Sion): 78 %
-[D] observed 2025 revenue, Sion (CHF 2): 41'280 CHF; employer total at CHF 4 in Lausanne: 264'270 CHF
 [D] central elasticities (net of Sion): extensive -0.368, intensive -0.102
 [D] central scenario:
    fee       S       D       T          rev
@@ -99,6 +98,5 @@ Children (mean)                               0.89                              
 [E] 0 children: 52.6 % of employees, 34.5 % of 2025 revenue; mean spending of 2025 drivers 538 CHF/year; expected drivers at CHF 6: 129 (2025: 143)
 [E] 1 child: 19.4 % of employees, 22.1 % of 2025 revenue; mean spending of 2025 drivers 640 CHF/year; expected drivers at CHF 6: 69 (2025: 77)
 [E] 2 or more children: 28.0 % of employees, 43.4 % of 2025 revenue; mean spending of 2025 drivers 738 CHF/year; expected drivers at CHF 6: 116 (2025: 131)
-[E] Sion: mean spending of 2025 drivers 336 CHF/year
 [E] at CHF 6: mean spending of remaining drivers 932 CHF/year; maximum individual burden 2.69 %; expected share of remaining drivers above 1 %: 44.1 %
 [E] maximum individual burden 2025 (Lausanne): 1.86 %; share of drivers above 1 %: 12.8 %
