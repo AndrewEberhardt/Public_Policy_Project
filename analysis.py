@@ -38,7 +38,11 @@ FIG.mkdir(parents=True, exist_ok=True)
 WEEKS = 46                      # working weeks per year
 FEE_2024, FEE_2025 = 2.0, 4.0   # Lausanne fee
 SCENARIOS = [4, 5, 6, 8, 10]    # CHF per day, 4 = 2025 baseline
-RECO_FEE = 6                    # recommended 2026 fee (Part F)
+# recommended 2026 policy (Part F): two-price fee, Lausanne only. Reduced rate (= 2025 fee) for employees without a
+# realistic alternative (poor transit access, or 2+ children under 16 outside good access) or with a low income
+# (lowest income tercile per FTE); standard rate for all others, raised to RECO_STEP2 in 2027 only if the 12-month
+# review shows that the car use target is missed.
+RECO_STD, RECO_REDUCED, RECO_STEP2 = 6.0, 4.0, 8.0
 N_BOOT = 999
 RNG = np.random.default_rng(2026)
 
@@ -797,45 +801,74 @@ plt.close(fig)
 E = df[df.year == 2025].copy()
 E["spend"] = E.parking_fee_chf * E.car_days_per_week * WEEKS
 E["burden"] = 100 * E.spend / E.gross_income_chf
-# projection at the recommended fee (Lausanne only): elasticities specific to each transit access class
-# (Lausanne before-after, Tables B2 and C1), since transit access is the dimension where the response differs most;
-# each 2025 driver still drives with probability (p/4)^eps_ext and scales days by (p/4)^eps_int
-ratio = RECO_FEE / FEE_2025
-# eps_cls: elasticities by transit class, defined in Part D
-note("[E] elasticities by transit class used for the projection: "
-     + "; ".join(f"{c} extensive {a:.3f}, intensive {b:.3f}" for c, (a, b) in eps_cls.items()))
-e_ext_i = E.transit_class.map(lambda c: eps_cls[c][0]).astype(float)
+
+
+def reduced_rate(frame):
+    """Eligibility for the reduced rate of the recommended policy (Part F)."""
+    return ((frame.transit_class == "Poor") | ((frame.n_children >= 2) & (frame.transit_class != "Good"))
+            | (frame.income_tercile == "T1 (low)")).to_numpy()
+
+
+def reco_fee(frame, standard=RECO_STD):
+    """Daily fee of each employee under the recommended policy (standard = RECO_STD in 2026, RECO_STEP2 in step 2)."""
+    return np.where(reduced_rate(frame), RECO_REDUCED, standard).astype(float)
+
+
+# Projection at the recommended policy (Lausanne only). The fee now differs by transit access and family situation,
+# so the share of drivers responds with elasticities specific to each cell transit access class x children under 16
+# (0-1, 2 or more), and days per driver with elasticities by transit access class (Lausanne before-after, Tables B2
+# and C1). Each 2025 driver still drives with probability (p/4)^eps_ext and scales days by (p/4)^eps_int.
+kids_group = lambda f: np.where(f.n_children >= 2, "2 or more", "0-1")
+cell_share = (LS.assign(kids=kids_group(LS)).groupby(["transit_class", "kids", "year"], observed=True)
+              .uses_car.mean().unstack())
+eps_cell = np.log(cell_share[2025] / cell_share[2024]) / np.log(FEE_2025 / FEE_2024)
+cell_n = LS[LS.year == 2025].assign(kids=kids_group(LS[LS.year == 2025])).groupby(
+    ["transit_class", "kids"], observed=True).size()
+note("[E] extensive elasticities by transit class x children used for the projection: "
+     + "; ".join(f"{c} / {k} children {v:.3f} (n = {cell_n[(c, k)]})" for (c, k), v in eps_cell.items()))
+note("[E] intensive elasticities by transit class: "
+     + "; ".join(f"{c} {b:.3f}" for c, (a, b) in eps_cls.items()))
+e_ext_i = pd.Series([eps_cell[(c, k)] for c, k in zip(E.transit_class, kids_group(E))], index=E.index)
 e_int_i = E.transit_class.map(lambda c: eps_cls[c][1]).astype(float)
-E["burden_reco_driver"] = np.where(E.uses_car == 1, 100 * RECO_FEE * E.car_days_per_week * ratio ** e_int_i
+E["reduced"] = reduced_rate(E)
+E["fee_reco"] = reco_fee(E)
+ratio = E.fee_reco / FEE_2025
+E["burden_reco_driver"] = np.where(E.uses_car == 1, 100 * E.fee_reco * E.car_days_per_week * ratio ** e_int_i
                                    * WEEKS / E.gross_income_chf, np.nan)
-E["p_stay"] = np.where(E.uses_car == 1, ratio ** e_ext_i, 0.0)        # probability of still driving at RECO_FEE
+E["p_stay"] = np.where(E.uses_car == 1, ratio ** e_ext_i, 0.0)    # probability of still driving at the new fee
 E["burden_reco_all"] = np.where(E.uses_car == 1, E.burden_reco_driver * E.p_stay, 0.0)
 
 EL = E[E.site == "Lausanne"]
-COL_C_ALL, COL_C_DRV = f"(c) All, CHF {RECO_FEE} (%)", f"(c) Remaining drivers, CHF {RECO_FEE} (%)"
+RECO_LABEL = f"CHF {RECO_STD:.0f} / {RECO_REDUCED:.0f}"
+COL_C_ALL, COL_C_DRV = f"(c) All, {RECO_LABEL} (%)", f"(c) Remaining drivers, {RECO_LABEL} (%)"
 rows = []
 for t, l, g in [("Overall", "All", EL)] + [(t, lev, EL[EL[v] == lev]) for t, v, lv in GROUPS for lev in lv]:
     dr = g[g.uses_car == 1]
     rows.append({"Dimension": t, "Group": l, "Employees": len(g), "Drivers 2025": len(dr),
+                 "Reduced rate (%)": pct(g.reduced.mean()),
                  "(a) All, 2025 (%)": f"{g.burden.mean():.2f}",
                  "(b) Drivers, 2025 (%)": f"{dr.burden.mean():.2f}",
                  COL_C_ALL: f"{g.burden_reco_all.mean():.2f}",
-                 # remaining drivers: 2025 drivers weighted by their probability of still driving at RECO_FEE
+                 # remaining drivers: 2025 drivers weighted by their probability of still driving at the new fee
                  COL_C_DRV: f"{np.average(dr.burden_reco_driver, weights=dr.p_stay):.2f}",
                  "Share of 2025 revenue (%)": pct(g.spend.sum() / EL.spend.sum())})
-    note(f"[E] {l}: {pct(len(g) / len(EL))} % of employees, {pct(g.spend.sum() / EL.spend.sum())} % of 2025 "
-         f"revenue; mean spending of 2025 drivers {chf(dr.spend.mean())} CHF/year; expected drivers at CHF "
-         f"{RECO_FEE}: {dr.p_stay.sum():.0f} (2025: {len(dr)})")
+    note(f"[E] {l}: {pct(len(g) / len(EL))} % of employees, {pct(g.reduced.mean())} % at the reduced rate, "
+         f"{pct(g.spend.sum() / EL.spend.sum())} % of 2025 revenue; mean spending of 2025 drivers "
+         f"{chf(dr.spend.mean())} CHF/year; expected drivers at {RECO_LABEL}: {dr.p_stay.sum():.0f} (2025: {len(dr)})")
 tE1 = pd.DataFrame(rows)
 save(tE1, "table_E1", table_note=(
     f"Note: Lausanne site only (N = {len(EL)} employees, 2025). Annual parking spending = fee x car days per week x "
     f"{WEEKS} weeks, as % of observed gross income (at the observed FTE). (a) mean over all employees (0 for "
-    f"non-drivers); (b) mean over 2025 drivers; (c) projection at CHF {RECO_FEE} with elasticities specific to each "
-    "transit access class (Tables B2 and C1); remaining drivers weighted by their probability of still driving. "
-    "No welfare effect and no unobserved transit cost is inferred."))
+    f"non-drivers); (b) mean over 2025 drivers; (c) projection under the recommended 2026 policy (Part F): CHF "
+    f"{RECO_REDUCED:.0f} (unchanged) for employees with poor transit access, with 2 or more children under 16 outside "
+    f"good access, or in the lowest income tercile, CHF {RECO_STD:.0f} for all others. Projection with extensive "
+    "elasticities by transit access class x children (0-1, 2 or more) and intensive elasticities by transit access "
+    "class (Lausanne, 2024 to 2025); remaining drivers weighted by their probability of still driving. Reduced rate: "
+    "% of the group's employees eligible for the reduced rate. No welfare effect and no unobserved transit cost is "
+    "inferred."))
 drL = EL[EL.uses_car == 1]
-spend_reco = RECO_FEE * drL.car_days_per_week * ratio ** e_int_i[drL.index] * WEEKS
-note(f"[E] at CHF {RECO_FEE}: mean spending of remaining drivers {chf(np.average(spend_reco, weights=drL.p_stay))} "
+spend_reco = drL.fee_reco * drL.car_days_per_week * ratio[drL.index] ** e_int_i[drL.index] * WEEKS
+note(f"[E] at {RECO_LABEL}: mean spending of remaining drivers {chf(np.average(spend_reco, weights=drL.p_stay))} "
      f"CHF/year; maximum individual burden {drL.burden_reco_driver.max():.2f} %; expected share of remaining "
      f"drivers above 1 %: {pct(np.average(drL.burden_reco_driver > 1, weights=drL.p_stay))} %")
 note(f"[E] maximum individual burden 2025 (Lausanne): {EL.burden.max():.2f} %; "
@@ -843,23 +876,28 @@ note(f"[E] maximum individual burden 2025 (Lausanne): {EL.burden.max():.2f} %; "
 
 
 # Burden at each scenario fee (comparison of the options, Part F): same projection as column (c) of Table E1
-def project(p):
-    """Lausanne 2025 drivers at fee p: probability of still driving, spending and burden if still driving."""
+def project(p, e_ext=None):
+    """Lausanne 2025 drivers at fee p (scalar or one fee per driver): probability of still driving, car days per week
+    and spending if still driving, burden. e_ext: extensive elasticities per driver (default: Table E1 projection)."""
+    p = np.broadcast_to(np.asarray(p, dtype=float), (len(drL),))
     r = p / FEE_2025
-    out = drL[["transit_class", "income_tercile", "gross_income_chf"]].copy()
-    out["p_stay"] = r ** e_ext_i[drL.index]
-    out["spend"] = p * drL.car_days_per_week * r ** e_int_i[drL.index] * WEEKS
+    ee = e_ext_i[drL.index].to_numpy() if e_ext is None else e_ext
+    out = drL[["transit_class", "income_tercile", "gross_income_chf", "n_children"]].copy()
+    out["fee"] = p
+    out["p_stay"] = r ** ee
+    out["days"] = drL.car_days_per_week.to_numpy() * r ** e_int_i[drL.index].to_numpy()
+    out["spend"] = p * out.days * WEEKS
     out["burden"] = 100 * out.spend / out.gross_income_chf
     return out
 
 
-assert np.allclose(project(RECO_FEE).burden, drL.burden_reco_driver)
+assert np.allclose(project(drL.fee_reco).burden, drL.burden_reco_driver)
 for p in SCENARIOS:
     pr = project(p)
     w = pr.p_stay
     wavg = lambda x, m=slice(None): np.average(x[m], weights=w[m])
     poor, t1 = pr.transit_class == "Poor", pr.income_tercile == "T1 (low)"
-    note(f"[E] CHF {p}, remaining drivers (by-class projection): expected {w.sum():.0f}; mean spending "
+    note(f"[E] CHF {p}, remaining drivers (Table E1 projection): expected {w.sum():.0f}; mean spending "
          f"{chf(wavg(pr.spend))} CHF/year; above 1 % of income {pct(wavg(pr.burden > 1))} %, above 2 % "
          f"{pct(wavg(pr.burden > 2))} %; maximum {pr.burden.max():.2f} %; mean burden Poor access "
          f"{wavg(pr.burden, poor):.2f} %, low income T1 {wavg(pr.burden, t1):.2f} %")
@@ -867,6 +905,105 @@ for p in SCENARIOS:
     note(f"[E] CHF {p}, by transit access: " + "; ".join(
         f"{c} {w[pr.transit_class == c].sum():.0f} drivers (2025: {(pr.transit_class == c).sum()}), "
         f"{pct((w * pr.spend)[pr.transit_class == c].sum() / tot)} % of revenue" for c in ORDER_T))
+
+
+
+# =============================================================================
+# Part F: recommended policy compared with alternatives (policy memo, Table 1)
+# =============================================================================
+no_alt = ((drL.transit_class == "Poor") | ((drL.n_children >= 2) & (drL.transit_class != "Good"))).to_numpy()
+FIVE_DAYS = 5   # cars parked on an average day = car days per employee x employees / 5
+REV_2025 = (drL.car_days_per_week * FEE_2025 * WEEKS).sum()
+F_OPTIONS = {   # label: (fee shown, fee of each 2025 driver)
+    "A. Status quo": ("4", FEE_2025),
+    "B. Uniform": ("5", 5.0),
+    "C. Uniform": ("6", 6.0),
+    "D. Uniform": ("8", 8.0),
+    "E. No-alternative only": ("8 / 4", np.where(no_alt, RECO_REDUCED, RECO_STEP2)),
+    "F. Recommended 2026": (f"{RECO_STD:.0f} / {RECO_REDUCED:.0f}", drL.fee_reco.to_numpy()),
+    "G. Step 2, 2027 if needed": (f"{RECO_STEP2:.0f} / {RECO_REDUCED:.0f}", reco_fee(drL, RECO_STEP2)),
+}
+
+
+def package(fee, e_ext=None):
+    """Projected outcomes of a fee schedule for the Lausanne site (same projection as Table E1, column c)."""
+    pr = project(fee, e_ext)
+    w = pr.p_stay
+    wavg = lambda x, m: np.average(x[m], weights=w[m])
+    extra = pr.spend - FEE_2025 * drL.car_days_per_week * WEEKS      # change in spending if still driving
+    up = (pr.fee > FEE_2025).to_numpy()
+    T = (w * pr.days).sum() / N_LAU
+    return {"T": T, "change": 100 * (T / T4_obs - 1), "parked": (w * pr.days).sum() / FIVE_DAYS,
+            "drivers": w.sum(), "n_up": int(up.sum()), "extra": wavg(extra, up) if up.any() else 0.0,
+            "lose500": (w * (extra > 500)).sum(), "rev": (w * pr.spend).sum(),
+            "b_poor": wavg(pr.burden, pr.transit_class == "Poor"),
+            "b_low": wavg(pr.burden, pr.income_tercile == "T1 (low)"),
+            "b_kids": wavg(pr.burden, pr.n_children >= 2)}
+
+
+T4_obs = drL.car_days_per_week.sum() / N_LAU
+resF = {k: package(f) for k, (_, f) in F_OPTIONS.items()}
+assert np.isclose(resF["A. Status quo"]["rev"], REV_2025)
+tF1 = pd.DataFrame([{
+    "Option": k, "Fee (CHF/day)": F_OPTIONS[k][0], "Car days per employee": f"{r['T']:.2f}",
+    "Change (%)": "" if k.startswith("A.") else f"{r['change']:.1f}",
+    "Drivers paying more": f"{r['n_up']}", "Mean increase (CHF/year)": "" if r["n_up"] == 0 else chf(r["extra"]),
+    "Burden, poor access (%)": f"{r['b_poor']:.2f}", "Burden, low income (%)": f"{r['b_low']:.2f}",
+    "Extra revenue (CHF/year)": "" if k.startswith("A.") else chf(round(r["rev"] - REV_2025, -3)),
+} for k, r in resF.items()])
+save(tF1, "table_F1", table_note=(
+    f"Note: Lausanne site (N = {N_LAU} employees; {len(drL)} drivers in 2025). A is observed in 2025; other options "
+    "are projected from 2025 with constant elasticities (share of drivers by transit access class x children 0-1 / 2 "
+    "or more; days per driver by transit access class; Lausanne, 2024 to 2025). E: CHF 4 for poor access and for 2 or "
+    "more children outside good access, CHF 8 otherwise. F, G: CHF 4 for the same groups and the lowest income "
+    "tercile, CHF 6 (F) or 8 (G) otherwise. Car days per employee: per week, non-drivers counted as 0. Change: vs "
+    "2025. Drivers paying more: 2025 drivers whose fee rises; mean increase in annual spending if they keep driving. "
+    "Burden: annual parking spending as % of observed gross income, mean over remaining drivers of the group. Extra "
+    f"revenue: annual revenue (fee x car days x {WEEKS} weeks) minus 2025 revenue (CHF {chf(round(REV_2025, -3))})."))
+for k, r in resF.items():
+    note(f"[F] {k}: car days per employee {r['T']:.2f} ({r['change']:.1f} %), cars parked per day {r['parked']:.0f}, "
+         f"expected drivers {r['drivers']:.0f}, drivers paying more {r['n_up']}, mean increase {chf(r['extra'])} "
+         f"CHF/year, drivers losing > CHF 500/year {r['lose500']:.0f}, extra revenue {chf(r['rev'] - REV_2025)} CHF; "
+         f"burden poor access {r['b_poor']:.2f} %, low income {r['b_low']:.2f} %, 2+ children {r['b_kids']:.2f} %")
+
+# who pays and who is protected (recommended 2026 policy)
+pay = ~drL.reduced.to_numpy()
+pF = project(drL.fee_reco)
+note(f"[F] reduced rate: {EL.reduced.sum()} of {len(EL)} employees ({pct(EL.reduced.mean())} %), {(~pay).sum()} of "
+     f"{len(drL)} drivers; employees eligible only through the income criterion: "
+     f"{(reduced_rate(EL) & ~((EL.transit_class == 'Poor') | ((EL.n_children >= 2) & (EL.transit_class != 'Good'))).to_numpy()).sum()}"
+     f" ({(pay == False).sum() - no_alt.sum()} drivers)")
+note(f"[F] drivers at the standard rate: {pay.sum()} (by class: "
+     + ", ".join(f"{c} {(drL.transit_class[pay] == c).sum()}" for c in ORDER_T)
+     + f"); by income tercile: " + ", ".join(f"{t} {(drL.income_tercile[pay] == t).sum()}"
+                                         for t in ["T1 (low)", "T2 (middle)", "T3 (high)"])
+     + f"; mean gross income {chf(drL.gross_income_chf[pay].mean())} CHF vs {chf(drL.gross_income_chf[~pay].mean())} "
+       f"CHF at the reduced rate; expected to stop driving: {(1 - pF.p_stay[pay]).sum():.0f}")
+good = (drL.transit_class == "Good").to_numpy()
+n_good = (EL.transit_class == "Good").sum()
+note(f"[F] good access car share: 2025 {pct(good.sum() / n_good)} %, expected 2026 "
+     f"{pct(pF.p_stay[good].sum() / n_good)} %")
+
+# sensitivity of the projections to the method: (i) cell elasticities scaled to the net-of-Sion response (Table C3),
+# (ii) linear probability model with interactions (Table B3, column d): change in the share of drivers of the
+# employee's cell = coefficient on log(fee) for this employee x log(p / 4), converted into a probability of still
+# driving by dividing by the 2025 share of drivers of the cell
+scale_net = e_did[0] / e_raw[0]
+pdm = mB["(d) + interactions"].params
+b_i = (pdm["log_fee"] + pdm.filter(like="T.Medium").iloc[0] * (drL.transit_class == "Medium").to_numpy()
+       + pdm.filter(like="T.Poor").iloc[0] * (drL.transit_class == "Poor").to_numpy()
+       + pdm.filter(like="n_children)[T.1]").iloc[0] * (drL.n_children == 1).to_numpy()
+       + pdm.filter(like="n_children)[T.2]").iloc[0] * (drL.n_children >= 2).to_numpy()
+       + pdm["log_fee:income_c"] * drL.income_c.to_numpy())
+S_cell_i = np.array([cell_share.loc[(c, k), 2025] for c, k in zip(drL.transit_class, kids_group(drL))])
+for k in ["C. Uniform", "F. Recommended 2026", "G. Step 2, 2027 if needed"]:
+    fee = np.broadcast_to(np.asarray(F_OPTIONS[k][1], dtype=float), (len(drL),))
+    net = package(fee, e_ext_i[drL.index].to_numpy() * scale_net)["change"]
+    pr = project(fee)
+    stay_lpm = np.clip(1 + b_i * np.log(fee / FEE_2025) / S_cell_i, 0, 1)
+    lpm = 100 * ((stay_lpm * pr.days).sum() / N_LAU / T4_obs - 1)
+    note(f"[F] sensitivity, {k}: change in car days per employee {resF[k]['change']:.1f} % (main), "
+         f"{net:.1f} % (net of Sion), {lpm:.1f} % (linear probability model, Table B3 d)")
 
 (OUT / "results.txt").write_text("\n".join(LOG) + "\n")
 print(f"\nTables written to {TAB}, figure to {FIG}")
