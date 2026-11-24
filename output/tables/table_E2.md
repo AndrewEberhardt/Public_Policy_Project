@@ -1,0 +1,9 @@
+| Fee (CHF/day) | Expected drivers | Mean spending (CHF/year) | Drivers above 1 % of income (%) | Drivers above 2 % of income (%) | Burden, poor access (%) | Burden, low income T1 (%) | Burden, 2 or more children (%) | Poor access share of revenue (%) |
+|---|---|---|---|---|---|---|---|---|
+| 4 (2025) | 351 | 635 | 12.8 | 0.0 | 0.80 | 0.97 | 0.83 | 36.5 |
+| 5 | 331 | 788 | 27.3 | 2.1 | 0.99 | 1.20 | 1.02 | 38.4 |
+| 6 | 316 | 939 | 45.1 | 3.4 | 1.18 | 1.44 | 1.21 | 39.9 |
+| 8 | 295 | 1'239 | 70.4 | 11.5 | 1.55 | 1.91 | 1.58 | 42.2 |
+| 10 | 281 | 1'537 | 88.1 | 26.6 | 1.92 | 2.37 | 1.95 | 44.0 |
+
+Note: Lausanne drivers of 2025 (N = 351) under a uniform fee, projected as column (c) of Table E1 (extensive elasticities by transit class x children, intensive elasticities by class, Lausanne before-after); every statistic is weighted by each driver's probability of still driving. Burden = annual parking spending as % of observed gross income, mean over remaining drivers of the group.

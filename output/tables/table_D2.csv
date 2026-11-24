@@ -1,0 +1,6 @@
+Fee (CHF/day),Central,"CI, strong response","CI, weak response",Before-after,By transit class,Linear model B3 (c),Spread (pp),Drivers (central),Cars parked per day (central),"Revenue, central (kCHF)","Revenue, CI (kCHF)"
+4 (2025),43.9,43.9,43.9,43.9,43.9,43.9,0.0,351,242,223,223 to 223
+5,40.4,39.7,41.2,41.1,41.2,39.7,1.6,323,218,251,244 to 258
+6,37.8,36.5,39.1,38.9,39.3,36.3,3.0,302,200,276,262 to 291
+8,34.0,32.1,36.0,35.7,36.4,30.9,5.6,272,175,322,294 to 351
+10,31.3,29.0,33.8,33.4,34.5,26.7,7.8,250,157,362,322 to 407

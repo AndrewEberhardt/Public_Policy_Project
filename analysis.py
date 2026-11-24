@@ -1005,5 +1005,87 @@ for k in ["C. Uniform", "F. Recommended 2026", "G. Step 2, 2027 if needed"]:
     note(f"[F] sensitivity, {k}: change in car days per employee {resF[k]['change']:.1f} % (main), "
          f"{net:.1f} % (net of Sion), {lpm:.1f} % (linear probability model, Table B3 d)")
 
+# =============================================================================
+# Additional report tables: B4 (model-implied group effects), D2 (forecast sensitivity), E2 (burden by uniform fee)
+# =============================================================================
+def lincom(m, terms):
+    """Sum of coefficients and its clustered standard error."""
+    r = np.array([float(n in terms) for n in m.params.index])
+    t = m.t_test(r)
+    return float(np.ravel(t.effect)[0]), float(np.ravel(t.sd)[0])
+
+
+GROUP_LABELS = ["Reference (Good access, 0 children, mean income)", "Medium transit access", "Poor transit access",
+                "1 child", "2 or more children"]
+rows = []
+for lab, (_, terms) in zip(GROUP_LABELS, GROUP_TERMS):
+    bB, sB = lincom(mB["(d) + interactions"], terms)
+    bC, sC = lincom(mC["(d) + interactions"], terms)
+    k = 100 * np.log(2)
+    rows.append({"Group (other characteristics at reference)": lab,
+                 "Car use: effect of doubling (pp)": f"{k * bB:.1f}",
+                 "Car use: 95% CI (pp)": f"{k * (bB - 1.96 * sB):.1f} to {k * (bB + 1.96 * sB):.1f}",
+                 "Days per driver: elasticity": f"{bC:.2f}",
+                 "Days per driver: 95% CI": f"{bC - 1.96 * sC:.2f} to {bC + 1.96 * sC:.2f}"})
+bI, sI = mB["(d) + interactions"].params["log_fee:income_c"], mB["(d) + interactions"].bse["log_fee:income_c"]
+cI, cIs = mC["(d) + interactions"].params["log_fee:income_c"], mC["(d) + interactions"].bse["log_fee:income_c"]
+rows.append({"Group (other characteristics at reference)": "Income + CHF 10'000 per FTE (change vs reference)",
+             "Car use: effect of doubling (pp)": f"{100 * np.log(2) * bI:+.1f}",
+             "Car use: 95% CI (pp)": f"{100 * np.log(2) * (bI - 1.96 * sI):.1f} to {100 * np.log(2) * (bI + 1.96 * sI):.1f}",
+             "Days per driver: elasticity": f"{cI:+.3f}",
+             "Days per driver: 95% CI": f"{cI - 1.96 * cIs:.3f} to {cI + 1.96 * cIs:.3f}"})
+tB4 = pd.DataFrame(rows)
+save(tB4, "table_B4", table_note=(
+    "Note: linear combinations of the coefficients of column (d) of Tables B3 (car use, linear probability model) "
+    "and C2 (log days per driver, car users only): log(fee) plus the relevant interaction. Effect of doubling the "
+    "fee on car use = combination x ln 2 x 100, in pp; days per driver: elasticity. Each row changes one "
+    "characteristic relative to the reference employee (Good access, 0 children, mean income per FTE). 95% CI from "
+    "standard errors clustered by employee."))
+
+tD2 = pd.DataFrame({
+    "Fee (CHF/day)": [f"{p}" + (" (2025)" if p == FEE_2025 else "") for p in SCENARIOS],
+    "Central": central.S.map(pct),
+    "CI, strong response": alt_lo.S.map(pct),
+    "CI, weak response": alt_hi.S.map(pct),
+    "Before-after": alt_raw.S.map(pct),
+    "By transit class": by_class.S.map(pct),
+    "Linear model B3 (c)": variants_S["linear"].map(pct),
+    "Spread (pp)": spread.map(lambda v: f"{v:.1f}"),
+    "Drivers (central)": (central.S * N_LAU).round(0).astype(int),
+    "Cars parked per day (central)": (central["T"] * N_LAU / WORKDAYS).round(0).astype(int),
+    "Revenue, central (kCHF)": (central.rev / 1000).round(0).astype(int),
+    "Revenue, CI (kCHF)": [f"{l / 1000:.0f} to {h / 1000:.0f}" for l, h in zip(alt_lo.rev, alt_hi.rev)]})
+save(tD2, "table_D2", table_note=(
+    f"Note: Lausanne site (N = {N_LAU}). Columns 2 to 7: forecast car share (%) under six variants. Central: "
+    f"constant net-of-Sion elasticities (extensive {e_did[0]:.2f}, intensive {e_did[1]:.2f}). CI: bootstrap bounds "
+    f"of both elasticities. Before-after: Lausanne elasticities without the Sion correction ({e_raw[0]:.2f}, "
+    f"{e_raw[1]:.2f}). By transit class: before-after elasticities of each class (Tables B2, C1) applied to that "
+    "class and summed. Linear model: car share changes by coefficient (c) of Table B3 x ln(p / 4) (linear in log "
+    "fee, not constant elasticity). Spread: maximum minus minimum of the six variants. Cars parked per day = car "
+    f"days per employee x {N_LAU} / {WORKDAYS}. Revenue = fee x car days x {WEEKS} weeks."))
+
+rows = []
+for p in SCENARIOS:
+    pr = project(p)
+    w = pr.p_stay
+    wavg = lambda x, m=slice(None): np.average(x[m], weights=w[m])
+    poor, t1, k2 = pr.transit_class == "Poor", pr.income_tercile == "T1 (low)", pr.n_children >= 2
+    tot = (w * pr.spend).sum()
+    rows.append({"Fee (CHF/day)": f"{p}" + (" (2025)" if p == FEE_2025 else ""),
+                 "Expected drivers": f"{w.sum():.0f}",
+                 "Mean spending (CHF/year)": chf(wavg(pr.spend)),
+                 "Drivers above 1 % of income (%)": pct(wavg(pr.burden > 1)),
+                 "Drivers above 2 % of income (%)": pct(wavg(pr.burden > 2)),
+                 "Burden, poor access (%)": f"{wavg(pr.burden, poor):.2f}",
+                 "Burden, low income T1 (%)": f"{wavg(pr.burden, t1):.2f}",
+                 "Burden, 2 or more children (%)": f"{wavg(pr.burden, k2):.2f}",
+                 "Poor access share of revenue (%)": pct((w * pr.spend)[poor].sum() / tot)})
+tE2 = pd.DataFrame(rows)
+save(tE2, "table_E2", table_note=(
+    f"Note: Lausanne drivers of 2025 (N = {len(drL)}) under a uniform fee, projected as column (c) of Table E1 "
+    "(extensive elasticities by transit class x children, intensive elasticities by class, Lausanne before-after); "
+    "every statistic is weighted by each driver's probability of still driving. Burden = annual parking spending as "
+    "% of observed gross income, mean over remaining drivers of the group."))
+
 (OUT / "results.txt").write_text("\n".join(LOG) + "\n")
 print(f"\nTables written to {TAB}, figure to {FIG}")
