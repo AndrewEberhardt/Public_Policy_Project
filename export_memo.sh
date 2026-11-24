@@ -8,22 +8,23 @@ jupyter nbconvert memo_policy.ipynb --to html --no-input --no-prompt \
   --output memo_policy_print
 python3 - <<'PY'
 css = """<style>
-@page { size: A4; margin: 1.5cm 1.6cm; }
+@page { size: A4; margin: 1.2cm 1.4cm; }
 body, .jp-Notebook, .jp-RenderedHTMLCommon { font-family: "Helvetica Neue", Arial, sans-serif !important;
-  font-size: 9.6pt !important; line-height: 1.32 !important; color: #111; }
+  font-size: 12pt !important; line-height: 1.2 !important; color: #111; }
 .jp-Notebook { padding: 0 !important; }
 .jp-Cell { padding: 0 !important; margin: 0 !important; }
-.jp-RenderedHTMLCommon h1 { font-size: 15pt !important; margin: 0 0 6px 0 !important; }
-.jp-RenderedHTMLCommon h2 { font-size: 11.5pt !important; margin: 8px 0 3px 0 !important; }
+.jp-RenderedHTMLCommon h1 { font-size: 16pt !important; margin: 0 0 6px 0 !important; }
+.jp-RenderedHTMLCommon h2 { font-size: 13.5pt !important; margin: 8px 0 3px 0 !important; }
 .jp-RenderedHTMLCommon p, .jp-RenderedHTMLCommon li { margin: 0 0 4px 0 !important; }
 .jp-RenderedHTMLCommon ul, .jp-RenderedHTMLCommon ol { margin: 0 0 4px 0 !important; padding-left: 18px !important; }
 .jp-RenderedHTMLCommon hr { margin: 4px 0 !important; }
-.jp-RenderedHTMLCommon table { font-size: 7.6pt !important; margin: 2px 0 !important; width: 100%; }
+.jp-RenderedHTMLCommon table { font-size: 8pt !important; margin: 2px 0 !important; width: 100%; }
 .jp-RenderedHTMLCommon th, .jp-RenderedHTMLCommon td { padding: 1px 4px !important; }
 .memo-note { font-size: 7.8pt !important; font-style: italic; color: #333; margin: 2px 0 6px 0 !important; }
 .jp-RenderedHTMLCommon td:first-child { min-width: 11.5em; }
 .jp-OutputArea-output { break-inside: avoid; }
-.jp-OutputArea-output img { max-width: 82% !important; display: block; margin: 0 auto; }
+.memo-fig img, .jp-OutputArea-output img { max-width: 64% !important; display: block; margin: 0 auto; }
+.memo-fig { break-inside: avoid; }
 .jp-OutputArea-output, .jp-OutputArea-child { margin: 0 !important; padding: 0 !important; }
 table, img { page-break-inside: avoid; }
 </style>"""
